@@ -28,8 +28,6 @@ internal class ScrubberThumb: CALayer {
     
     // MARK: - Public Variables -
     var displayTextFont: UIFont = UIFont.systemFont(ofSize: 18)
-    var textColor : UIColor = .white
-    
     @IBInspectable  var displayTextFontSize: CGFloat = 14.0 {
         didSet {
             if #available(iOS 8.2, *) {
@@ -133,6 +131,21 @@ internal class ScrubberThumb: CALayer {
         }
     }
     
+    /*
+     Sets the color of the display value view.
+     */
+    var displayValueBackgroudColor = UIColor.black {
+        didSet {
+            self.valueDisplayLayer.displayBackgroundColor = displayValueBackgroudColor
+            updateFrames()
+        }
+    }
+    var displayValueTextColor = UIColor.white {
+        didSet {
+            self.valueDisplayLayer.textColor = displayValueTextColor
+            updateFrames()
+        }
+    }
     // MARK: - Superclass methods -
     
     override init(frame: CGRect) {
@@ -161,14 +174,15 @@ internal class ScrubberThumb: CALayer {
     
     override  func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         previousLocation = thumbLayer.position
-        let extendedFrame = thumbLayer.frame.insetBy(dx: -thumbWidth * 1.5, dy: -thumbWidth * 1.5)
+        let extendedFrame = thumbLayer.frame.insetBy(dx: -thumbWidth * 0.5, dy: -thumbWidth *  0.5)
         if extendedFrame.contains(touch.location(in: self)) {
             sendActions(for: .touchDown)
             thumbLayer.highlighted = true
             thumbWidth = thumbWidth * thumbScale
         }
         else {
-            if trackLayer.frame.contains(touch.location(in: self)) {
+            let trackLayerExtendedFrame = trackLayer.frame.insetBy(dx: 0, dy: -trackLayer.frame.height * 1  )
+            if trackLayerExtendedFrame.contains(touch.location(in: self)) {
                 sendActions(for: .touchDown)
                 let deltaValue = getValue(touch)
                 value = deltaValue
@@ -237,7 +251,6 @@ internal class ScrubberThumb: CALayer {
         
         
         valueDisplayLayer.contentsScale = UIScreen.main.scale
-        valueDisplayLayer.scrubber = self
         valueDisplayLayer.isHidden = true
         layer.addSublayer(valueDisplayLayer)
         
@@ -246,7 +259,7 @@ internal class ScrubberThumb: CALayer {
     
     private func updateFrames() {
         CATransaction.begin()
-        CATransaction.setDisableActions(true)
+        CATransaction.setDisableActions(self.isTracking)
         self.trackLayer.frame = CGRect(x: 0.0, y: self.bounds.height / 2.0, width: self.bounds.width, height: self.trackHeight)
         self.trackLayer.cornerRadius = self.trackHeight / 2.0
         self.trackLayer.setNeedsDisplay()
@@ -257,6 +270,15 @@ internal class ScrubberThumb: CALayer {
         self.thumbLayer.frame = CGRect(x: thumbCenter.x, y: self.trackLayer.frame.midY - thumbRadius , width: thumbSize, height: thumbSize)
         self.thumbLayer.cornerRadius = thumbRadius
         self.thumbLayer.setNeedsDisplay()
+        
+        
+        
+//        let trackFillLayerFrameAnimation = CABasicAnimation(keyPath: "frame")
+//        trackFillLayerFrameAnimation.duration = 1.0
+//        trackFillLayerFrameAnimation.fromValue = [NSValue(cgRect: CGRect.zero)]
+//        trackFillLayerFrameAnimation.toValue = [NSValue(cgRect: CGRect(origin: self.trackLayer.frame.origin, size: CGSize(width: thumbCenter.x + thumbSize, height: self.trackHeight)))]
+//        trackFillLayer.add(trackFillLayerFrameAnimation, forKey: "trackFillLayerFrameAnimation")
+
         
         self.trackFillLayer.frame = CGRect(origin: self.trackLayer.frame.origin, size: CGSize(width: thumbCenter.x + thumbSize, height: self.trackHeight))
         self.trackFillLayer.cornerRadius = self.trackHeight / 2.0
@@ -272,6 +294,7 @@ internal class ScrubberThumb: CALayer {
                                          width: valueWidth,
                                          height: valueHeight)
         self.valueDisplayLayer.setNeedsDisplay()
+        CATransaction.setDisableActions(true)
         CATransaction.commit()
     }
    

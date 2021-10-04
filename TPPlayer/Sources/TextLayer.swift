@@ -10,14 +10,12 @@ import Foundation
 import UIKit
 class TextLayer: CATextLayer {
     var arrowSize : CGSize = .init(width: 25, height: 7)
-    weak var scrubber: Scrubber?
+    var textColor : UIColor = .white
+    var displayTextFontSize : CGFloat = 12
+    var displayBackgroundColor : UIColor = .black
     override func draw(in ctx: CGContext) {
-        
-        guard let scrubber = scrubber else {
-            return
-        }
-        self.fontSize = scrubber.displayTextFontSize
-        self.foregroundColor = scrubber.textColor.cgColor
+        self.fontSize = displayTextFontSize
+        self.foregroundColor = textColor.cgColor
         self.alignmentMode = CATextLayerAlignmentMode.center
         let startPoint = CGPoint(x: 0, y: 0)
         ///box
@@ -33,6 +31,8 @@ class TextLayer: CATextLayer {
         ctx.addLine(to: CGPoint(x:self.bounds.width/2, y: arrowStartPoint.y + self.arrowSize.height))
         ctx.addLine(to: CGPoint(x:arrowStartPoint.x + arrowSize.width, y: arrowStartPoint.y))
         ctx.addLine(to: arrowStartPoint)
+        
+        ctx.setFillColor(displayBackgroundColor.cgColor)
         ctx.fillPath()
         
         // vertical text aligment

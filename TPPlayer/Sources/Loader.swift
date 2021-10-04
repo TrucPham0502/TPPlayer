@@ -18,7 +18,7 @@ class Loader: UIView {
     /*
      The width of the circle.
      */
-    var lineWidth: CGFloat = 5.0
+    var lineWidth: CGFloat = 4.0
 
     // MARK: - Superclass methods -
 

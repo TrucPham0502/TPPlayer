@@ -11,55 +11,63 @@ import UIKit
 /*
  Play and pause button.
  */
- class PlayPauseButton: UIButton {
+class PlayPauseButton: UIImageView {
     enum ButtonState {
         case play
         case pause
     }
-
-     var buttonState: ButtonState {
-        set {
-            switch newValue {
-            case .play:
-                isSelected = false
-            default:
-                isSelected = true
-            }
-        }
-        get {
-            return isSelected == true ? .pause : .play
+    var tap : (PlayPauseButton) -> () = {_ in }
+    var buttonState: ButtonState = .play {
+        didSet {
+            UIView.animate(withDuration: 0.2, animations: {
+                let extendedFrame = self.frame.insetBy(dx: -10, dy: -10)
+                self.frame = extendedFrame
+                self.layer.opacity = 0
+            }, completion:{(finished) in
+                switch self.buttonState {
+                case .pause:
+                    self.image = UIImage(named: "ic_pause")
+                default:
+                    self.image = UIImage(named: "ic_play")
+                }
+                UIView.animate(withDuration: 0.2,animations:{
+                    let extendedFrame = self.frame.insetBy(dx: 10, dy: 10)
+                    self.frame = extendedFrame
+                    self.layer.opacity = 1
+                },completion:nil)
+            })
+            
         }
     }
     override init(frame: CGRect) {
         super.init(frame: frame)
-
+        
         commonInit()
     }
-
+    init() {
+        super.init(frame: .zero)
+        commonInit()
+    }
+    
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-
+        
         commonInit()
     }
-
-     override func layoutSubviews() {
+    
+    override func layoutSubviews() {
         super.layoutSubviews()
     }
-
+    
     @objc fileprivate func changeState() {
-        isSelected = !isSelected
+        buttonState = buttonState == .pause ? .play : .pause
+        tap(self)
     }
-
+    
     private func commonInit() {
-        if #available(iOS 15, *) {
-            
-        }
-        else {
-            self.contentEdgeInsets = .zero
-        }
-        self.setImage(UIImage(named: "ic_play"), for: .normal)
-        self.setImage(UIImage(named: "ic_pause"), for: .selected)
-        addTarget(self, action: #selector(changeState), for: .touchUpInside)
+        self.image = UIImage(named: "ic_play")
+        self.isUserInteractionEnabled = true
+        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action:  #selector(changeState)))
     }
 }
 
@@ -68,50 +76,52 @@ class ResizeButton: UIButton {
         case large
         case small
     }
-
+    
     var buttonState: ButtonState {
         set {
             switch newValue {
             case .large:
-                isSelected = false
+                self.isSelected = false
             default:
-                isSelected = true
+                self.isSelected = true
             }
         }
         get {
             return isSelected == true ? .small : .large
         }
     }
-   override init(frame: CGRect) {
-       super.init(frame: frame)
-
-       commonInit()
-   }
-
-   required public init?(coder aDecoder: NSCoder) {
-       super.init(coder: aDecoder)
-
-       commonInit()
-   }
-
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        commonInit()
+    }
+    
+    
+    required public init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        
+        commonInit()
+    }
+    
     override func layoutSubviews() {
-       super.layoutSubviews()
-   }
-
-   @objc fileprivate func changeState() {
-       isSelected = !isSelected
-   }
-
-   private func commonInit() {
-       if #available(iOS 15, *) {
-           
-       }
-       else {
-           self.contentEdgeInsets = .zero
-       }
-       self.setImage(UIImage(named: "ic_resize_small"), for: .normal)
-       self.setImage(UIImage(named: "ic_resize_large"), for: .selected)
-       addTarget(self, action: #selector(changeState), for: .touchUpInside)
-   }
+        super.layoutSubviews()
+    }
+    
+    @objc fileprivate func changeState() {
+        buttonState = isSelected ? .large : .small
+    }
+    
+    private func commonInit() {
+        if #available(iOS 15, *) {
+            
+        }
+        else {
+            self.contentEdgeInsets = .zero
+        }
+        
+        self.setImage(UIImage(named: "ic_resize_small"), for: .normal)
+        self.setImage(UIImage(named: "ic_resize_large"), for: .selected)
+        addTarget(self, action: #selector(changeState), for: .touchUpInside)
+    }
 }
 

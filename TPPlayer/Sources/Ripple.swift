@@ -9,11 +9,11 @@ import Foundation
 import UIKit
 
 public extension UIView {
-    func rippleFill(location:CGPoint, color:UIColor) {
+    func rippleFill(location:CGPoint, color:UIColor, scale : CGFloat = 10) {
         rippleFill(location: location, color: color){}
     }
     
-    func rippleFill(location:CGPoint, color:UIColor, then:@escaping ()->() ) {
+    func rippleFill(location:CGPoint, color:UIColor, scale : CGFloat = 10, then:@escaping ()->() ) {
         Ripple().fill(view: self, locationInView: location, color: color, then: then)
     }
     
@@ -26,23 +26,23 @@ public extension UIView {
 class RippleLayer : CALayer {
     
 }
-
-public class Ripple {
+class Ripple {
     
-    public struct Option {
-        public var borderWidth = CGFloat(5.0)
-        public var radius = CGFloat(30.0)
-        public var duration = CFTimeInterval(0.4)
-        public var borderColor = UIColor.white
-        public var fillColor = UIColor.clear
-        public var scale = CGFloat(20.0)
-        public var isRunSuperView = false
+    struct Option {
+        var borderWidth = CGFloat(5.0)
+        var radius = CGFloat(30.0)
+        var duration = CFTimeInterval(0.4)
+        var borderColor = UIColor.white
+        var fillColor = UIColor.clear
+        var scale = CGFloat(20.0)
+        var isRunSuperView = false
     }
     
-    public func fill(view:UIView, locationInView:CGPoint, color:UIColor,then:@escaping ()->() ) {
+    func fill(view:UIView, locationInView:CGPoint, color:UIColor = UIColor.clear,scale : CGFloat = 10, then:@escaping ()->() ) {
         var opt = Ripple.Option()
         opt.borderColor = color
         opt.fillColor = color
+        opt.scale = scale
         prePreform(view: view, point: locationInView, option: opt, isLocationInView: opt.isRunSuperView , then: then)
     }
     

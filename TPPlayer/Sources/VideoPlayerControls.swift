@@ -7,19 +7,21 @@
 
 import Foundation
 import UIKit
+import AVFoundation
+
 class VideoPlayerControls : UIView {
     
-    
     // MARK: Properties
-    private lazy var rippleLeft : RippleView = {
-        let v =  RippleView()
+    private lazy var rippleLeft : CircleRippleView = {
+        let v =  CircleRippleView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.isUserInteractionEnabled = true
         v.type = .left
+        v.backgroundColor = .red
         return v
     }()
-    private lazy var rippleRight : RippleView = {
-        let v =  RippleView()
+    private lazy var rippleRight : CircleRippleView = {
+        let v =  CircleRippleView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.isUserInteractionEnabled = true
         v.type = .right
@@ -27,16 +29,25 @@ class VideoPlayerControls : UIView {
     }()
     
     private lazy var playPauseButton : PlayPauseButton = {
-       let v = PlayPauseButton()
+        let v = PlayPauseButton()
         v.backgroundColor = .clear
-        v.tintColor = tintColor
-        v.addTarget(self, action: #selector(playButtonPressed), for: .touchUpInside)
+        v.tap = { button in
+            self.playButtonPressed()
+        }
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
     private lazy var  progressSlider : Scrubber = {
         let v = Scrubber()
-        v.tintColor = tintColor
+        v.trackHeight = 2
+        v.trackColor = UIColor.white.cgColor
+        v.thumbColor = UIColor.white.cgColor
+        v.trackFillColor = UIColor.orange.cgColor
+        v.thumbScale = 1.5
+        v.displayValueBackgroudColor = .black.withAlphaComponent(0.7)
+        v.formatValueDisplay = { value in
+            return "\(value)"
+        }
         v.addTarget(self, action: #selector(progressSliderChanged(slider:)), for: [.touchUpInside])
         v.addTarget(self, action: #selector(progressSliderBeginTouch), for: [.touchDown])
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +55,7 @@ class VideoPlayerControls : UIView {
     }()
     private lazy var nextButton : UIButton = {
         let v = UIButton()
-        v.tintColor = tintColor
+        v.setImage(UIImage(named: "ic_next"), for: .normal)
         v.addTarget(self, action: #selector(nextButtonPressed), for: .touchUpInside)
         if #available(iOS 15, *) {
            
@@ -57,7 +68,7 @@ class VideoPlayerControls : UIView {
     }()
     private lazy var previousButton : UIButton = {
         let v = UIButton()
-        v.tintColor = tintColor
+        v.setImage(UIImage(named: "ic_prev"), for: .normal)
         v.addTarget(self, action: #selector(previousButtonPressed), for: .touchUpInside)
         if #available(iOS 15, *) {
             
@@ -70,14 +81,13 @@ class VideoPlayerControls : UIView {
     }()
     private lazy var progressLoader : Loader = {
         let v = Loader()
-        v.tintColor = tintColor
+        v.tintColor = .white
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
     private lazy var resizeButton : ResizeButton = {
         let v = ResizeButton()
         v.backgroundColor = .clear
-        v.tintColor = tintColor
         v.addTarget(self, action: #selector(resizeButtonPressed), for: .touchUpInside)
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
@@ -88,7 +98,8 @@ class VideoPlayerControls : UIView {
         v.numberOfLines = 1
         v.font = .systemFont(ofSize: 12) //medium
         v.textAlignment = .center
-        v.textColor = tintColor
+        v.textColor  = .white
+        v.text = "0:00 / 0:00"
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
@@ -108,6 +119,31 @@ class VideoPlayerControls : UIView {
     
     
     // MARK: Variables
+    private var controlsToggleWorkItem: DispatchWorkItem?
+    var playPauseButtonConstant : AppConstants = .init()
+    var nextButtonConstant : AppConstants = .init()
+    var previousButtonConstant : AppConstants = .init()
+    var progressLoaderConstant : AppConstants = .init()
+    var currentTimeLabelConstant : AppConstants = .init()
+    var resizeButtonConstant : AppConstants = .init()
+    var speedButtonConstant : AppConstants = .init()
+    var progressSliderConstant : AppConstants = .init()
+    // indicate current device is in the LandScape orientation
+    var isLandscape: Bool {
+        get {
+            return UIDevice.current.orientation.isValidInterfaceOrientation
+                ? UIDevice.current.orientation.isLandscape
+                : UIApplication.shared.statusBarOrientation.isLandscape
+        }
+    }
+    // indicate current device is in the Portrait orientation
+    var isPortrait: Bool {
+        get {
+            return UIDevice.current.orientation.isValidInterfaceOrientation
+                ? UIDevice.current.orientation.isPortrait
+                : UIApplication.shared.statusBarOrientation.isPortrait
+        }
+    }
     var nextButtonHidden: Bool {
         set {
             nextButton.isHidden = newValue
@@ -126,22 +162,10 @@ class VideoPlayerControls : UIView {
         }
     }
     
-    override var tintColor: UIColor! {
+    var interacting: ((Bool) -> Void) = {_ in }
+    @objc private var isInteracting: Bool = false {
         didSet {
-            playPauseButton.tintColor = tintColor
-            nextButton.tintColor = tintColor
-            previousButton.tintColor = tintColor
-            progressLoader.tintColor = tintColor
-            progressSlider.tintColor = tintColor
-            currentTimeLabel.textColor = tintColor
-            
-            resizeButton.tintColor = tintColor
-        }
-    }
-    var interacting: ((Bool) -> Void)?
-    @objc var isInteracting: Bool = false {
-        didSet {
-            interacting?(isInteracting)
+            interacting(isInteracting)
         }
     }
     // MARK: - Superclass methods -
@@ -160,25 +184,25 @@ class VideoPlayerControls : UIView {
     
     func newVideo(){
         self.progressSlider.isUserInteractionEnabled = false
-        
-        self.progressLoader.startAnimating()
         self.progressSlider.value = 0.0
         
         
-        self.currentTimeLabel.text = String(format: "%d / %d",self.timeFormatted(totalSeconds: 0), self.timeFormatted(totalSeconds: 0))
+        self.currentTimeLabel.text = String(format: "%@ / %@",self.timeFormatted(totalSeconds: 0), self.timeFormatted(totalSeconds: 0))
         
         self.progressLoader.startAnimating()
+        self.playPauseButton.isHidden = true
     }
     
     func readyToPlayVideo(_ videoLength: Int, currentTime: Int) {
         self.configureInitialControlState(videoLength,currentTime: currentTime)
     }
     
-    func playingVideo(_ progress: CGFloat, currentTime: Int){
+    func playingVideo(_ videoLength: Int, currentTime: Int){
+        let progress : CGFloat = CGFloat(currentTime) / (videoLength != 0 ? CGFloat(videoLength) : 1.0)
         if self.isInteracting == false {
             self.progressSlider.value = progress
         }
-        self.currentTimeLabel.text = self.timeFormatted(totalSeconds: currentTime)
+        self.currentTimeLabel.text = String(format: "%@ / %@",self.timeFormatted(totalSeconds: currentTime), self.timeFormatted(totalSeconds: videoLength))
     }
     
     func startedVideo(_ videoLength: Int, currentTime: Int) {
@@ -188,7 +212,7 @@ class VideoPlayerControls : UIView {
     }
     
     func stoppedVideo() {
-        self.playPauseButton.isSelected = false
+        self.playPauseButton.buttonState = .play
         self.progressSlider.value = 0.0
     }
     
@@ -201,10 +225,12 @@ class VideoPlayerControls : UIView {
     
     func seekStarted(){
         self.progressLoader.startAnimating()
+        self.playPauseButton.isHidden = true
     }
     
     func seekEnded() {
         self.progressLoader.stopAnimating()
+        self.playPauseButton.isHidden = false
     }
     
     func pausedVideo(){
@@ -212,10 +238,31 @@ class VideoPlayerControls : UIView {
         isInteracting = false
     }
     
+    func hideControls(_ complete : ((Bool) -> ())? = nil){
+        UIView.animate(withDuration: 0.3, animations: {
+            self.subviews.forEach({
+                if !($0 is CircleRippleView) {
+                    $0.layer.opacity = 0.0
+                }
+            })
+        }, completion: { finished in
+            complete?(finished)
+        })
+    }
+    func showControls(_ complete : ((Bool) -> ())? = nil) {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.subviews.forEach({
+                $0.layer.opacity = 1
+            })
+        }, completion: { finished in
+            complete?(finished)
+        })
+    }
+    
     // MARK: - Private methods -
     
     
-    @objc private func playButtonPressed() {
+    private func playButtonPressed() {
         
     }
     @objc private func nextButtonPressed() {
@@ -246,17 +293,18 @@ class VideoPlayerControls : UIView {
     private func timeFormatted(totalSeconds: Int) -> String {
         let seconds = totalSeconds % 60
         let minutes = (totalSeconds / 60) % 60
-        let hours = totalSeconds / 3600
+//        let hours = totalSeconds / 3600
         
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        return String(format: "%02d:%02d", minutes, seconds)
     }
     private func configureInitialControlState(_ videoLength: Int, currentTime: Int) {
         
         progressSlider.isUserInteractionEnabled = true
         
-        currentTimeLabel.text = String(format: "%d / %d", timeFormatted(totalSeconds: currentTime), timeFormatted(totalSeconds: videoLength))
+        currentTimeLabel.text = String(format: "%@ / %@", timeFormatted(totalSeconds: currentTime), timeFormatted(totalSeconds: videoLength))
         
         progressLoader.stopAnimating()
+        self.playPauseButton.isHidden = false
     }
     
     @objc private func doubleTapControl(_ sender : UITapGestureRecognizer){
@@ -267,70 +315,133 @@ class VideoPlayerControls : UIView {
             rippleRight.beginRippleTouchDown(at: sender.location(in: rippleRight), animated: true)
         }
     }
-    
+    @objc private func rotated(_ sender : Any?){
+        self.playPauseButtonConstant.height?.constant = getSize(78)
+        self.nextButtonConstant.left?.constant = getSize(28)
+        self.nextButtonConstant.height?.constant = getSize(32)
+        self.previousButtonConstant.height?.constant = getSize(32)
+        self.progressLoaderConstant.height?.constant = getSize(45)
+        self.currentTimeLabelConstant.left?.constant = getSize(32)
+        self.currentTimeLabelConstant.bottom?.constant = getSize(-19)
+        self.resizeButtonConstant.right?.constant = getSize(-32)
+        self.resizeButtonConstant.height?.constant = getSize(24)
+        self.speedButtonConstant.right?.constant = getSize(-24)
+        self.speedButtonConstant.height?.constant = getSize(24)
+        self.progressSliderConstant.left?.constant = getSize(23)
+        self.progressSliderConstant.right?.constant = getSize(-23)
+        self.progressSliderConstant.height?.constant = getSize(24)
+        
+    }
+    @objc private func toggleControls(_ sender : Any?){
+        if self.alpha == 1.0  { //&& videoPlayerView.status == .playing
+            hideControls()
+        } else {
+            controlsToggleWorkItem?.cancel()
+            controlsToggleWorkItem = DispatchWorkItem(block: { [weak self] in
+                self?.hideControls()
+            })
+
+            showControls()
+
+            if true { //videoPlayerView.status == .playing
+                DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3), execute: controlsToggleWorkItem!)
+            }
+        }
+    }
+  
     private func commonInit() {
-        addSubview(rippleLeft)
-        addSubview(rippleRight)
+        [rippleLeft, rippleRight, progressLoader, progressSlider, nextButton, previousButton, currentTimeLabel, resizeButton, speedButton, playPauseButton].forEach({addSubview($0)})
         
-        addSubview(progressLoader)
-        addSubview(playPauseButton)
-        addSubview(progressSlider)
-        addSubview(nextButton)
-        addSubview(previousButton)
-        addSubview(currentTimeLabel)
-        addSubview(resizeButton)
+        NotificationCenter.default.addObserver(self, selector: #selector(rotated), name: UIDevice.orientationDidChangeNotification, object: nil)
         
-       let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapControl))
-        doubleTap.numberOfTapsRequired = 2
-        self.addGestureRecognizer(doubleTap)
+        self.interacting = { [weak self] (isInteracting) in
+            guard let strongSelf = self else { return }
+
+            strongSelf.controlsToggleWorkItem?.cancel()
+            strongSelf.controlsToggleWorkItem = DispatchWorkItem(block: {
+                strongSelf.hideControls()
+            })
+
+            if isInteracting == true {
+                strongSelf.showControls()
+            } else {
+                if true { //strongSelf.videoPlayerView.status == .playing
+                    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3), execute: strongSelf.controlsToggleWorkItem!)
+                }
+            }
+        }
         
+//        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
+//        tapGestureRecognizer.delegate = self
+//        addGestureRecognizer(tapGestureRecognizer)
+        
+        
+        let doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(doubleTapControl))
+        doubleTapGestureRecognizer.delegate = self
+        doubleTapGestureRecognizer.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTapGestureRecognizer)
         setupLayout()
     }
-   
+    private func getSize(_ value : CGFloat) -> CGFloat {
+        return UIScreen.main.bounds.width * value / 375
+    }
+  
+    
     private func setupLayout() {
+        playPauseButtonConstant = .init(
+            width: self.playPauseButton.widthAnchor.constraint(equalTo: self.playPauseButton.heightAnchor),
+            height: self.playPauseButton.heightAnchor.constraint(equalToConstant: getSize(78)),
+            centerX: self.playPauseButton.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            centerY: self.playPauseButton.centerYAnchor.constraint(equalTo: self.centerYAnchor))
         
-        NSLayoutConstraint.activate([
-            self.playPauseButton.centerXAnchor.constraint(equalTo: self.centerXAnchor),
-            self.playPauseButton.centerYAnchor.constraint(equalTo: self.centerYAnchor),
-            self.playPauseButton.widthAnchor.constraint(equalTo: self.playPauseButton.heightAnchor),
-            self.playPauseButton.heightAnchor.constraint(equalToConstant: 78),
-            
-            self.nextButton.centerYAnchor.constraint(equalTo: self.playPauseButton.centerYAnchor),
-            self.nextButton.leadingAnchor.constraint(equalTo: self.playPauseButton.leadingAnchor, constant: 28),
-            self.nextButton.widthAnchor.constraint(equalTo: self.nextButton.heightAnchor),
-            self.nextButton.heightAnchor.constraint(equalToConstant: 32),
-            
-            self.previousButton.centerYAnchor.constraint(equalTo: self.playPauseButton.centerYAnchor),
-            self.previousButton.trailingAnchor.constraint(equalTo: self.playPauseButton.leadingAnchor, constant: -28),
-            self.previousButton.widthAnchor.constraint(equalTo: self.previousButton.heightAnchor),
-            self.previousButton.heightAnchor.constraint(equalToConstant: 32),
-            
-            
-            self.progressLoader.centerXAnchor.constraint(equalTo: self.centerXAnchor),
-            self.progressLoader.centerYAnchor.constraint(equalTo: self.centerYAnchor),
-            self.progressLoader.widthAnchor.constraint(equalTo: self.progressLoader.heightAnchor),
-            self.progressLoader.heightAnchor.constraint(equalToConstant: 80),
-            
-            self.currentTimeLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 32),
-            self.currentTimeLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -19),
-            
-            
-            self.resizeButton.widthAnchor.constraint(equalTo: self.resizeButton.heightAnchor),
-            self.resizeButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -32),
-            self.resizeButton.heightAnchor.constraint(equalToConstant: 24),
-            self.resizeButton.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
-            
-            
-            self.speedButton.trailingAnchor.constraint(equalTo: self.resizeButton.leadingAnchor, constant: -24),
-            self.speedButton.widthAnchor.constraint(equalTo: self.speedButton.heightAnchor),
-            self.speedButton.heightAnchor.constraint(equalToConstant: 24),
-            self.speedButton.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
-            
-            self.progressSlider.leadingAnchor.constraint(equalTo: self.currentTimeLabel.trailingAnchor, constant: 23),
-            self.progressSlider.heightAnchor.constraint(equalToConstant: 24),
-            self.progressSlider.trailingAnchor.constraint(equalTo: self.speedButton.leadingAnchor, constant: 23),
-            self.progressSlider.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
-        ])
+        
+        nextButtonConstant = .init(
+            left: self.nextButton.leadingAnchor.constraint(equalTo: self.playPauseButton.trailingAnchor, constant: getSize(28)),
+            width: self.nextButton.widthAnchor.constraint(equalTo: self.nextButton.heightAnchor),
+            height:  self.nextButton.heightAnchor.constraint(equalToConstant: getSize(32)),
+            centerY: self.nextButton.centerYAnchor.constraint(equalTo: self.playPauseButton.centerYAnchor))
+        
+        
+        previousButtonConstant = .init(
+            right: self.previousButton.trailingAnchor.constraint(equalTo: self.playPauseButton.leadingAnchor, constant: -28),
+            width: self.previousButton.widthAnchor.constraint(equalTo: self.previousButton.heightAnchor),
+            height: self.previousButton.heightAnchor.constraint(equalToConstant: getSize(32)),
+            centerY: self.previousButton.centerYAnchor.constraint(equalTo: self.playPauseButton.centerYAnchor))
+        
+        
+        progressLoaderConstant = .init(
+            width: self.progressLoader.widthAnchor.constraint(equalTo: self.progressLoader.heightAnchor),
+            height: self.progressLoader.heightAnchor.constraint(equalToConstant: getSize(45)),
+            centerX:  self.progressLoader.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            centerY: self.progressLoader.centerYAnchor.constraint(equalTo: self.centerYAnchor))
+        
+        
+        currentTimeLabelConstant = .init(
+            left: self.currentTimeLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: getSize(32)),
+            bottom: self.currentTimeLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: getSize(-19)),
+            height:  self.currentTimeLabel.heightAnchor.constraint(equalTo: self.progressSlider.heightAnchor))
+        
+        
+        resizeButtonConstant = .init(
+            right: self.resizeButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: getSize(-32)),
+            bottom: self.resizeButton.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
+            width: self.resizeButton.widthAnchor.constraint(equalTo: self.resizeButton.heightAnchor),
+            height:   self.resizeButton.heightAnchor.constraint(equalToConstant: getSize(24)))
+        
+        speedButtonConstant = .init(
+            right:  self.speedButton.trailingAnchor.constraint(equalTo: self.resizeButton.leadingAnchor, constant: getSize(-24)),
+            bottom:  self.speedButton.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
+            width: self.speedButton.widthAnchor.constraint(equalTo: self.speedButton.heightAnchor),
+            height: self.speedButton.heightAnchor.constraint(equalToConstant: getSize(24)))
+        
+        
+        progressSliderConstant = .init(
+            left: self.progressSlider.leadingAnchor.constraint(equalTo: self.currentTimeLabel.trailingAnchor, constant: getSize(23)),
+            right:  self.progressSlider.trailingAnchor.constraint(equalTo: self.speedButton.leadingAnchor, constant: getSize(-23)),
+            bottom: self.progressSlider.bottomAnchor.constraint(equalTo: self.currentTimeLabel.bottomAnchor),
+            height:  self.progressSlider.heightAnchor.constraint(equalToConstant: getSize(24)))
+   
+        [playPauseButtonConstant, nextButtonConstant, previousButtonConstant, progressLoaderConstant, currentTimeLabelConstant, resizeButtonConstant, speedButtonConstant, progressSliderConstant].forEach({$0.active()})
         
         NSLayoutConstraint.activate([
             self.rippleLeft.leadingAnchor.constraint(equalTo: self.leadingAnchor),
@@ -349,4 +460,14 @@ class VideoPlayerControls : UIView {
     }
     
     
+}
+extension VideoPlayerControls : UIGestureRecognizerDelegate {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if let view = touch.view, view.isDescendant(of: self) == true, view != rippleLeft,
+            view != rippleRight {
+            return false
+        } else {
+            return true
+        }
+    }
 }

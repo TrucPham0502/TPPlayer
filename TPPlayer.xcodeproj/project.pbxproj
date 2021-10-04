@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8E609DDE270ABF72004B25BB /* ViewController2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E609DDD270ABF72004B25BB /* ViewController2.swift */; };
+		8E609DE0270ACF6B004B25BB /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E609DDF270ACF6B004B25BB /* AppConstants.swift */; };
 		FE8415F327057972002882B9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8415F227057972002882B9 /* AppDelegate.swift */; };
 		FE8415F527057972002882B9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8415F427057972002882B9 /* SceneDelegate.swift */; };
 		FE8415F727057972002882B9 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8415F627057972002882B9 /* ViewController.swift */; };
@@ -26,7 +28,7 @@
 		FEF76A9C270A91410050B807 /* ResizeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9B270A91410050B807 /* ResizeButton.swift */; };
 		FEF76A9E270A91D10050B807 /* ControlButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9D270A91D10050B807 /* ControlButtons.swift */; };
 		FEF76AA0270A95D10050B807 /* VideoPlayerControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */; };
-		FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA1270A967B0050B807 /* RippleView.swift */; };
+		FEF76AA2270A967B0050B807 /* CircleRippleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA1270A967B0050B807 /* CircleRippleView.swift */; };
 		FEF76AA4270AB0260050B807 /* Ripple.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA3270AB0260050B807 /* Ripple.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +50,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8E609DDD270ABF72004B25BB /* ViewController2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController2.swift; sourceTree = "<group>"; };
+		8E609DDF270ACF6B004B25BB /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
 		FE8415EF27057972002882B9 /* TPPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TPPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE8415F227057972002882B9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FE8415F427057972002882B9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -71,7 +75,7 @@
 		FEF76A9B270A91410050B807 /* ResizeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizeButton.swift; sourceTree = "<group>"; };
 		FEF76A9D270A91D10050B807 /* ControlButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlButtons.swift; sourceTree = "<group>"; };
 		FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerControls.swift; sourceTree = "<group>"; };
-		FEF76AA1270A967B0050B807 /* RippleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RippleView.swift; sourceTree = "<group>"; };
+		FEF76AA1270A967B0050B807 /* CircleRippleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircleRippleView.swift; sourceTree = "<group>"; };
 		FEF76AA3270AB0260050B807 /* Ripple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ripple.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -134,6 +138,7 @@
 				FE8415FD27057974002882B9 /* LaunchScreen.storyboard */,
 				FE84160027057974002882B9 /* Info.plist */,
 				FE841637270579BA002882B9 /* PlayerViewController.swift */,
+				8E609DDD270ABF72004B25BB /* ViewController2.swift */,
 			);
 			path = TPPlayer;
 			sourceTree = "<group>";
@@ -165,8 +170,9 @@
 				FEF76A9B270A91410050B807 /* ResizeButton.swift */,
 				FEF76A9D270A91D10050B807 /* ControlButtons.swift */,
 				FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */,
-				FEF76AA1270A967B0050B807 /* RippleView.swift */,
+				FEF76AA1270A967B0050B807 /* CircleRippleView.swift */,
 				FEF76AA3270AB0260050B807 /* Ripple.swift */,
+				8E609DDF270ACF6B004B25BB /* AppConstants.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -308,9 +314,11 @@
 				FEF76A9E270A91D10050B807 /* ControlButtons.swift in Sources */,
 				FE8415F327057972002882B9 /* AppDelegate.swift in Sources */,
 				FE84166C27074904002882B9 /* Scrubber.swift in Sources */,
+				8E609DE0270ACF6B004B25BB /* AppConstants.swift in Sources */,
 				FE841670270749B7002882B9 /* Math.swift in Sources */,
 				FE841638270579BA002882B9 /* PlayerViewController.swift in Sources */,
-				FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */,
+				FEF76AA2270A967B0050B807 /* CircleRippleView.swift in Sources */,
+				8E609DDE270ABF72004B25BB /* ViewController2.swift in Sources */,
 				FE84166E2707494A002882B9 /* TextLayer.swift in Sources */,
 				FE84167227074C6B002882B9 /* Loader.swift in Sources */,
 				FEF76AA4270AB0260050B807 /* Ripple.swift in Sources */,
@@ -502,6 +510,7 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -529,6 +538,7 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
