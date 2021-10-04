@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 53;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -27,6 +27,7 @@
 		FEF76A9E270A91D10050B807 /* ControlButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9D270A91D10050B807 /* ControlButtons.swift */; };
 		FEF76AA0270A95D10050B807 /* VideoPlayerControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */; };
 		FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA1270A967B0050B807 /* RippleView.swift */; };
+		FEF76AA4270AB0260050B807 /* Ripple.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA3270AB0260050B807 /* Ripple.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,6 +72,7 @@
 		FEF76A9D270A91D10050B807 /* ControlButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlButtons.swift; sourceTree = "<group>"; };
 		FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerControls.swift; sourceTree = "<group>"; };
 		FEF76AA1270A967B0050B807 /* RippleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RippleView.swift; sourceTree = "<group>"; };
+		FEF76AA3270AB0260050B807 /* Ripple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ripple.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,6 +166,7 @@
 				FEF76A9D270A91D10050B807 /* ControlButtons.swift */,
 				FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */,
 				FEF76AA1270A967B0050B807 /* RippleView.swift */,
+				FEF76AA3270AB0260050B807 /* Ripple.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -248,7 +251,7 @@
 				};
 			};
 			buildConfigurationList = FE8415EA27057972002882B9 /* Build configuration list for PBXProject "TPPlayer" */;
-			compatibilityVersion = "Xcode 13.0";
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -310,6 +313,7 @@
 				FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */,
 				FE84166E2707494A002882B9 /* TextLayer.swift in Sources */,
 				FE84167227074C6B002882B9 /* Loader.swift in Sources */,
+				FEF76AA4270AB0260050B807 /* Ripple.swift in Sources */,
 				FEF76AA0270A95D10050B807 /* VideoPlayerControls.swift in Sources */,
 				FEF76A9C270A91410050B807 /* ResizeButton.swift in Sources */,
 				FE8415F527057972002882B9 /* SceneDelegate.swift in Sources */,
