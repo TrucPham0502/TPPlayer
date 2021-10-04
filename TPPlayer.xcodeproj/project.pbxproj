@@ -23,7 +23,10 @@
 		FE84166E2707494A002882B9 /* TextLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84166D2707494A002882B9 /* TextLayer.swift */; };
 		FE841670270749B7002882B9 /* Math.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84166F270749B7002882B9 /* Math.swift */; };
 		FE84167227074C6B002882B9 /* Loader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84167127074C6B002882B9 /* Loader.swift */; };
-		FE84167427074E36002882B9 /* PlayPauseLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84167327074E36002882B9 /* PlayPauseLayer.swift */; };
+		FEF76A9C270A91410050B807 /* ResizeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9B270A91410050B807 /* ResizeButton.swift */; };
+		FEF76A9E270A91D10050B807 /* ControlButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9D270A91D10050B807 /* ControlButtons.swift */; };
+		FEF76AA0270A95D10050B807 /* VideoPlayerControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */; };
+		FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF76AA1270A967B0050B807 /* RippleView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,7 +67,10 @@
 		FE84166D2707494A002882B9 /* TextLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayer.swift; sourceTree = "<group>"; };
 		FE84166F270749B7002882B9 /* Math.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Math.swift; sourceTree = "<group>"; };
 		FE84167127074C6B002882B9 /* Loader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Loader.swift; sourceTree = "<group>"; };
-		FE84167327074E36002882B9 /* PlayPauseLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayPauseLayer.swift; sourceTree = "<group>"; };
+		FEF76A9B270A91410050B807 /* ResizeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizeButton.swift; sourceTree = "<group>"; };
+		FEF76A9D270A91D10050B807 /* ControlButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlButtons.swift; sourceTree = "<group>"; };
+		FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerControls.swift; sourceTree = "<group>"; };
+		FEF76AA1270A967B0050B807 /* RippleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RippleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,7 +160,10 @@
 				FE84166D2707494A002882B9 /* TextLayer.swift */,
 				FE84166F270749B7002882B9 /* Math.swift */,
 				FE84167127074C6B002882B9 /* Loader.swift */,
-				FE84167327074E36002882B9 /* PlayPauseLayer.swift */,
+				FEF76A9B270A91410050B807 /* ResizeButton.swift */,
+				FEF76A9D270A91D10050B807 /* ControlButtons.swift */,
+				FEF76A9F270A95D10050B807 /* VideoPlayerControls.swift */,
+				FEF76AA1270A967B0050B807 /* RippleView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -293,14 +302,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE8415F727057972002882B9 /* ViewController.swift in Sources */,
+				FEF76A9E270A91D10050B807 /* ControlButtons.swift in Sources */,
 				FE8415F327057972002882B9 /* AppDelegate.swift in Sources */,
 				FE84166C27074904002882B9 /* Scrubber.swift in Sources */,
 				FE841670270749B7002882B9 /* Math.swift in Sources */,
 				FE841638270579BA002882B9 /* PlayerViewController.swift in Sources */,
+				FEF76AA2270A967B0050B807 /* RippleView.swift in Sources */,
 				FE84166E2707494A002882B9 /* TextLayer.swift in Sources */,
 				FE84167227074C6B002882B9 /* Loader.swift in Sources */,
+				FEF76AA0270A95D10050B807 /* VideoPlayerControls.swift in Sources */,
+				FEF76A9C270A91410050B807 /* ResizeButton.swift in Sources */,
 				FE8415F527057972002882B9 /* SceneDelegate.swift in Sources */,
-				FE84167427074E36002882B9 /* PlayPauseLayer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

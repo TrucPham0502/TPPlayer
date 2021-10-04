@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ic_speed.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
