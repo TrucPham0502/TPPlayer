@@ -16,6 +16,14 @@
 		FE84160A27057975002882B9 /* TPPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84160927057975002882B9 /* TPPlayerTests.swift */; };
 		FE84161427057975002882B9 /* TPPlayerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84161327057975002882B9 /* TPPlayerUITests.swift */; };
 		FE84161627057975002882B9 /* TPPlayerUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84161527057975002882B9 /* TPPlayerUITestsLaunchTests.swift */; };
+		FE841638270579BA002882B9 /* PlayerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE841637270579BA002882B9 /* PlayerViewController.swift */; };
+		FE84163B27057A87002882B9 /* video2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FE84163927057A87002882B9 /* video2.mp4 */; };
+		FE84163C27057A87002882B9 /* video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FE84163A27057A87002882B9 /* video.mp4 */; };
+		FE84166C27074904002882B9 /* Scrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84166B27074904002882B9 /* Scrubber.swift */; };
+		FE84166E2707494A002882B9 /* TextLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84166D2707494A002882B9 /* TextLayer.swift */; };
+		FE841670270749B7002882B9 /* Math.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84166F270749B7002882B9 /* Math.swift */; };
+		FE84167227074C6B002882B9 /* Loader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84167127074C6B002882B9 /* Loader.swift */; };
+		FE84167427074E36002882B9 /* PlayPauseLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84167327074E36002882B9 /* PlayPauseLayer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +57,14 @@
 		FE84160F27057975002882B9 /* TPPlayerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TPPlayerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE84161327057975002882B9 /* TPPlayerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TPPlayerUITests.swift; sourceTree = "<group>"; };
 		FE84161527057975002882B9 /* TPPlayerUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TPPlayerUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		FE841637270579BA002882B9 /* PlayerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewController.swift; sourceTree = "<group>"; };
+		FE84163927057A87002882B9 /* video2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = video2.mp4; sourceTree = "<group>"; };
+		FE84163A27057A87002882B9 /* video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = video.mp4; sourceTree = "<group>"; };
+		FE84166B27074904002882B9 /* Scrubber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scrubber.swift; sourceTree = "<group>"; };
+		FE84166D2707494A002882B9 /* TextLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayer.swift; sourceTree = "<group>"; };
+		FE84166F270749B7002882B9 /* Math.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Math.swift; sourceTree = "<group>"; };
+		FE84167127074C6B002882B9 /* Loader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Loader.swift; sourceTree = "<group>"; };
+		FE84167327074E36002882B9 /* PlayPauseLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayPauseLayer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +115,9 @@
 		FE8415F127057972002882B9 /* TPPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				FE84163A27057A87002882B9 /* video.mp4 */,
+				FE84163927057A87002882B9 /* video2.mp4 */,
+				FE841622270579A7002882B9 /* Sources */,
 				FE8415F227057972002882B9 /* AppDelegate.swift */,
 				FE8415F427057972002882B9 /* SceneDelegate.swift */,
 				FE8415F627057972002882B9 /* ViewController.swift */,
@@ -106,6 +125,7 @@
 				FE8415FB27057974002882B9 /* Assets.xcassets */,
 				FE8415FD27057974002882B9 /* LaunchScreen.storyboard */,
 				FE84160027057974002882B9 /* Info.plist */,
+				FE841637270579BA002882B9 /* PlayerViewController.swift */,
 			);
 			path = TPPlayer;
 			sourceTree = "<group>";
@@ -125,6 +145,18 @@
 				FE84161527057975002882B9 /* TPPlayerUITestsLaunchTests.swift */,
 			);
 			path = TPPlayerUITests;
+			sourceTree = "<group>";
+		};
+		FE841622270579A7002882B9 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				FE84166B27074904002882B9 /* Scrubber.swift */,
+				FE84166D2707494A002882B9 /* TextLayer.swift */,
+				FE84166F270749B7002882B9 /* Math.swift */,
+				FE84167127074C6B002882B9 /* Loader.swift */,
+				FE84167327074E36002882B9 /* PlayPauseLayer.swift */,
+			);
+			path = Sources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -232,7 +264,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE8415FF27057974002882B9 /* LaunchScreen.storyboard in Resources */,
+				FE84163C27057A87002882B9 /* video.mp4 in Resources */,
 				FE8415FC27057974002882B9 /* Assets.xcassets in Resources */,
+				FE84163B27057A87002882B9 /* video2.mp4 in Resources */,
 				FE8415FA27057972002882B9 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -260,7 +294,13 @@
 			files = (
 				FE8415F727057972002882B9 /* ViewController.swift in Sources */,
 				FE8415F327057972002882B9 /* AppDelegate.swift in Sources */,
+				FE84166C27074904002882B9 /* Scrubber.swift in Sources */,
+				FE841670270749B7002882B9 /* Math.swift in Sources */,
+				FE841638270579BA002882B9 /* PlayerViewController.swift in Sources */,
+				FE84166E2707494A002882B9 /* TextLayer.swift in Sources */,
+				FE84167227074C6B002882B9 /* Loader.swift in Sources */,
 				FE8415F527057972002882B9 /* SceneDelegate.swift in Sources */,
+				FE84167427074E36002882B9 /* PlayPauseLayer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
