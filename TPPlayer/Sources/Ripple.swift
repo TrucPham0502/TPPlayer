@@ -31,7 +31,7 @@ class Ripple {
     struct Option {
         var borderWidth = CGFloat(5.0)
         var radius = CGFloat(30.0)
-        var duration = CFTimeInterval(0.4)
+        var duration = CFTimeInterval(0.3)
         var borderColor = UIColor.white
         var fillColor = UIColor.clear
         var scale = CGFloat(20.0)
@@ -94,7 +94,7 @@ class Ripple {
         transform.fillMode = CAMediaTimingFillMode.forwards
         transform.isRemovedOnCompletion = false
         transform.duration = option.duration
-        transform.fromValue = NSValue(caTransform3D: CATransform3DMakeScale(1.0 / option.scale, 1.0 / option.scale, 1.0))
+        transform.fromValue = NSValue(caTransform3D: CATransform3DMakeScale(40.0 / option.scale, 40.0 / option.scale, 1.0))
         transform.toValue = NSValue(caTransform3D: CATransform3DMakeScale(option.scale, option.scale, 1.0))
         
         var rippleLayer = view.layer.sublayers?.first(where: { $0 is RippleLayer })

@@ -62,13 +62,15 @@ internal class ScrubberThumb: CALayer {
      */
      var value: CGFloat = 0.0 {
         didSet {
-            if thumbLayer.highlighted == false {
-                let clampedValue = clamp(value, lower: minimumValue, upper: maximumValue)
-                let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x + thumbWidth / 2.0, newMax: bounds.size.width - thumbWidth / 2.0)
-                previousLocation = CGPoint(x: positionX, y: 0.0)
+            if oldValue != value {
+                if thumbLayer.highlighted == false {
+                    let clampedValue = clamp(value, lower: minimumValue, upper: maximumValue)
+                    let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x + thumbWidth / 2.0, newMax: bounds.size.width - thumbWidth / 2.0)
+                    previousLocation = CGPoint(x: positionX, y: 0.0)
+                }
+                updateFrames()
+                sendActions(for: .valueChanged)
             }
-            
-            updateFrames()
         }
     }
     
@@ -186,7 +188,6 @@ internal class ScrubberThumb: CALayer {
                 sendActions(for: .touchDown)
                 let deltaValue = getValue(touch)
                 value = deltaValue
-                sendActions(for: .valueChanged)
                 sendActions(for: .touchUpInside)
             }
         }
@@ -197,7 +198,6 @@ internal class ScrubberThumb: CALayer {
         let deltaValue = getValue(touch)
         if thumbLayer.highlighted {
             value = deltaValue
-            sendActions(for: .valueChanged)
         }
         return thumbLayer.highlighted
     }

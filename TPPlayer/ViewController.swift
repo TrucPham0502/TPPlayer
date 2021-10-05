@@ -12,7 +12,8 @@ class ViewController: UIViewController {
     private lazy var videoControl : VideoPlayerControls = {
         let v = VideoPlayerControls()
         v.translatesAutoresizingMaskIntoConstraints = false
-//        v.newVideo()
+        v.newVideo()
+        v.readyToPlayVideo(1000, currentTime: 0)
         return v
     }()
     
