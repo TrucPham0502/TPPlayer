@@ -9,7 +9,7 @@ import Foundation
 import Foundation
 import UIKit
 class TextLayer: CATextLayer {
-    var arrowSize : CGSize = .init(width: 25, height: 7)
+    var arrowSize : CGSize = .init(width: 15, height: 7)
     var textColor : UIColor = .white
     var displayTextFontSize : CGFloat = 12
     var displayBackgroundColor : UIColor = .black
@@ -21,7 +21,7 @@ class TextLayer: CATextLayer {
         ///box
         let rectBox : CGRect = .init(origin: startPoint, size: .init(width: self.bounds.width, height: self.bounds.height - arrowSize.height))
         
-        let path = CGPath(roundedRect: rectBox, cornerWidth: 5, cornerHeight: 5, transform: nil)
+        let path = CGPath(roundedRect: rectBox, cornerWidth: 7, cornerHeight: 7, transform: nil)
         ctx.addPath(path)
         
         //arrow

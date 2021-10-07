@@ -61,7 +61,7 @@ class Loader: UIView {
         let headAnimation = CABasicAnimation(keyPath: "strokeStart")
         headAnimation.duration = 1.0
         headAnimation.fromValue = 0.0
-        headAnimation.toValue = 0.25
+        headAnimation.toValue = 0.1
         headAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
         let tailAnimation = CABasicAnimation(keyPath: "strokeEnd")
@@ -73,7 +73,7 @@ class Loader: UIView {
         let endHeadAnimation = CABasicAnimation(keyPath: "strokeStart")
         endHeadAnimation.beginTime = 1.0
         endHeadAnimation.duration = 0.5
-        endHeadAnimation.fromValue = 0.25
+        endHeadAnimation.fromValue = 0.1
         endHeadAnimation.toValue = 1.0
         endHeadAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         

@@ -22,7 +22,7 @@ class PlayPauseButton: UIImageView {
             UIView.animate(withDuration: 0.2, animations: {
                 let extendedFrame = self.frame.insetBy(dx: -10, dy: -10)
                 self.frame = extendedFrame
-                self.layer.opacity = 0
+                self.alpha = 0
             }, completion:{(finished) in
                 switch self.buttonState {
                 case .pause:
@@ -33,7 +33,7 @@ class PlayPauseButton: UIImageView {
                 UIView.animate(withDuration: 0.2,animations:{
                     let extendedFrame = self.frame.insetBy(dx: 10, dy: 10)
                     self.frame = extendedFrame
-                    self.layer.opacity = 1
+                    self.alpha = 1
                 },completion:nil)
             })
             
@@ -119,8 +119,8 @@ class ResizeButton: UIButton {
             self.contentEdgeInsets = .zero
         }
         
-        self.setImage(UIImage(named: "ic_resize_small"), for: .normal)
-        self.setImage(UIImage(named: "ic_resize_large"), for: .selected)
+        self.setImage(UIImage(named: "ic_resize_large"), for: .normal)
+        self.setImage(UIImage(named: "ic_resize_small"), for: .selected)
         addTarget(self, action: #selector(changeState), for: .touchUpInside)
     }
 }

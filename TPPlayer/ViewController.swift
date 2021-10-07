@@ -6,7 +6,7 @@
 //
 
 import UIKit
-
+import AVKit
 class ViewController: UIViewController {
     
     private lazy var videoControl : VideoPlayerControls = {
@@ -14,6 +14,9 @@ class ViewController: UIViewController {
         v.translatesAutoresizingMaskIntoConstraints = false
         v.newVideo()
         v.readyToPlayVideo(1000, currentTime: 0)
+        v.videoIsPlaying = {
+            return true
+        }
         return v
     }()
     
@@ -30,6 +33,7 @@ class ViewController: UIViewController {
             self.videoControl.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
             self.videoControl.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
         ])
+        
     }
 }
 extension UIView {

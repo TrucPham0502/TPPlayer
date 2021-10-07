@@ -94,7 +94,7 @@ class Ripple {
         transform.fillMode = CAMediaTimingFillMode.forwards
         transform.isRemovedOnCompletion = false
         transform.duration = option.duration
-        transform.fromValue = NSValue(caTransform3D: CATransform3DMakeScale(40.0 / option.scale, 40.0 / option.scale, 1.0))
+        transform.fromValue = NSValue(caTransform3D: CATransform3DMakeScale(1.0 / option.scale, 1.0 / option.scale, 1.0))
         transform.toValue = NSValue(caTransform3D: CATransform3DMakeScale(option.scale, option.scale, 1.0))
         
         var rippleLayer = view.layer.sublayers?.first(where: { $0 is RippleLayer })
