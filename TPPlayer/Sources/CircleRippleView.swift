@@ -227,8 +227,8 @@ class CircleRippleView : UIView {
         prepareUI()
     }
 
-    func setText(_ number: Int){
-        self.lblView.text = "\(number) giây"
+    func setText(_ number: Double){
+        self.lblView.text = "\(Int(number)) giây"
     }
     func beginRippleTouchUp(animated: Bool){
         self.rippleStop()

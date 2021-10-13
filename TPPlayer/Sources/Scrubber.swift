@@ -8,12 +8,12 @@
 import Foundation
 import UIKit
 
-class ScrubberThumb: CALayer {
+internal class ScrubberThumb: CALayer {
     var highlighted = false
     weak var scrubber: Scrubber?
 }
 
- class Scrubber: UIControl {
+class Scrubber: UIControl {
     
     // MARK: - Private Variables and Constants -
     private lazy var valueDisplayLayer : TextLayer = {
@@ -23,7 +23,6 @@ class ScrubberThumb: CALayer {
         return v
     }()
     private var previousLocation = CGPoint()
-    private var previousTrackingLocation = CGPoint()
     private lazy var trackLayer : CALayer = {
         let v = CALayer()
         v.backgroundColor = trackColor
@@ -46,34 +45,18 @@ class ScrubberThumb: CALayer {
         v.scrubber = self
         return v
     }()
-    private lazy var thumbTrackingLayer : ScrubberThumb = {
-        let v = ScrubberThumb()
-        v.backgroundColor = thumbColor
-        v.borderColor = UIColor.black.withAlphaComponent(0.1).cgColor
-        v.borderWidth = 0.5
-        v.shadowColor = UIColor.black.cgColor
-        v.shadowOffset = CGSize(width: 1.5, height: 1.5)
-        v.shadowOpacity = 0.35
-        v.shadowRadius = 2.0
-        v.isHidden = true
-        return v
-    }()
+    
+    private var isEndTracking : Bool = false
+    private var trackingValue : CGFloat = 0.0
+    var continueTracking : (CGFloat) -> () = {_ in }
+    var beginTracking : (CGFloat) -> () = {_ in }
+    var endTracking : (CGFloat) -> () = {_ in }
     var thumbScale : CGFloat = 2
+    
     var formatValueDisplay : (CGFloat) -> String = { v in
         return "\(v)"
     }
-    var trackingValue: CGFloat = 0.0 {
-       didSet {
-           if oldValue != trackingValue {
-                if thumbTrackingLayer.highlighted == false {
-                    let clampedValue = clamp(trackingValue, lower: minimumValue, upper: maximumValue)
-                    let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x + thumbWidth / 2.0, newMax: bounds.size.width - thumbWidth / 2.0)
-                    previousTrackingLocation = CGPoint(x: positionX, y: 0.0)
-                }
-                updateFrameThumbTrackingLayer()
-           }
-       }
-   }
+    
     // MARK: - Public Variables -
     var displayTextFont: UIFont = UIFont.systemFont(ofSize: 18)
     @IBInspectable  var displayTextFontSize: CGFloat = 14.0 {
@@ -90,7 +73,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the minimum value of the scrubber. Defaults to 0.0 .
      */
-     var minimumValue: CGFloat = 0.0 {
+    var minimumValue: CGFloat = 0.0 {
         didSet {
             updateFrames()
         }
@@ -99,7 +82,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the maximum value of the scrubber. Defaults to 1.0 .
      */
-     var maximumValue: CGFloat = 1.0 {
+    var maximumValue: CGFloat = 1.0 {
         didSet {
             updateFrames()
         }
@@ -109,20 +92,21 @@ class ScrubberThumb: CALayer {
      The current value of the scrubber.
      */
     var _value : CGFloat = 0.0
-     var value: CGFloat {
+    var value: CGFloat {
         get {
             return clamp(self._value, lower: minimumValue, upper: maximumValue)
         }
         set {
             if value != newValue {
-                let clampedValue = clamp(newValue, lower: minimumValue, upper: maximumValue)
-                if thumbLayer.highlighted == false {
-                    let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x + thumbWidth / 2.0, newMax: bounds.size.width - thumbWidth / 2.0)
+                if !isEndTracking {
+                    let clampedValue = clamp(newValue, lower: minimumValue, upper: maximumValue)
+                    let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x, newMax: bounds.size.width)
                     previousLocation = CGPoint(x: positionX, y: 0.0)
+                    
+                    _value = clampedValue
+                    sendActions(for: .valueChanged)
+                    updateFrames()
                 }
-                updateFrames()
-                _value = clampedValue
-                sendActions(for: .valueChanged)
             }
         }
     }
@@ -130,7 +114,7 @@ class ScrubberThumb: CALayer {
     /*
      The height of the track. Defaults to 6.0 .
      */
-     var trackHeight: CGFloat = 6.0 {
+    var trackHeight: CGFloat = 6.0 {
         didSet {
             updateFrames()
         }
@@ -139,7 +123,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the color of the unfilled part of the track.
      */
-     var trackColor = UIColor.white.withAlphaComponent(0.3).cgColor {
+    var trackColor = UIColor.white.withAlphaComponent(0.3).cgColor {
         didSet {
             trackLayer.backgroundColor = trackColor
             trackLayer.setNeedsDisplay()
@@ -149,7 +133,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the color of the filled part of the track.
      */
-     var trackFillColor = UIColor.white.cgColor {
+    var trackFillColor = UIColor.white.cgColor {
         didSet {
             trackFillLayer.backgroundColor = trackFillColor
             trackFillLayer.setNeedsDisplay()
@@ -159,7 +143,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the color of thumb.
      */
-     var thumbColor = UIColor.white.cgColor {
+    var thumbColor = UIColor.white.cgColor {
         didSet {
             thumbLayer.backgroundColor = thumbColor
             thumbLayer.setNeedsDisplay()
@@ -169,11 +153,9 @@ class ScrubberThumb: CALayer {
     /*
      Sets the width of the track.
      */
-     var thumbWidth: CGFloat = 12.0 {
+    var thumbWidth: CGFloat = 12.0 {
         didSet {
-            UIView.animate(withDuration: 0.3) {
-                self.valueDisplayLayer.opacity = self.thumbWidth < oldValue * self.thumbScale ? 0 : 1
-            }
+            self.valueDisplayLayer.opacity = thumbWidth < oldValue * thumbScale ? 0 : 1
             updateFrames()
         }
     }
@@ -181,7 +163,7 @@ class ScrubberThumb: CALayer {
     /*
      Sets the color of the thumb and track.
      */
-     override var tintColor: UIColor! {
+    override var tintColor: UIColor! {
         didSet {
             thumbColor = tintColor.cgColor
             trackFillColor = tintColor.cgColor
@@ -224,70 +206,84 @@ class ScrubberThumb: CALayer {
     override  func layoutSubviews() {
         value += 0.0
         updateFrames()
-        updateFrameThumbTrackingLayer()
     }
     
     // MARK: - UIControl methods -
     
     
     override  func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        previousTrackingLocation = touch.location(in: self)
+        //        previousLocation = thumbLayer.position
         let extendedFrame = thumbLayer.frame.insetBy(dx: -thumbWidth * 0.5, dy: -thumbWidth *  0.5)
         if extendedFrame.contains(touch.location(in: self)) {
-            // tap on thumb
             sendActions(for: .touchDown)
-            thumbTrackingLayer.highlighted = true
+            thumbLayer.highlighted = true
             thumbWidth = thumbWidth * thumbScale
-            hideThumbTracking(false)
-            self.trackingValue = getValue(touch)
+            updateFrameThumb(positionX: previousLocation.x, value: self.value)
+            self.beginTracking(self.value)
         }
         else {
             let trackLayerExtendedFrame = trackLayer.frame.insetBy(dx: 0, dy: -trackLayer.frame.height * 1  )
             if trackLayerExtendedFrame.contains(touch.location(in: self)) {
-                // tap on slider
                 sendActions(for: .touchDown)
                 let deltaValue = getValue(touch)
                 value = deltaValue
                 sendActions(for: .touchUpInside)
+                stopReceiveValue()
             }
         }
-        return thumbTrackingLayer.highlighted
+        return thumbLayer.highlighted
     }
     
     override  func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        let deltaValue = getValue(touch)
-        if thumbTrackingLayer.highlighted {
-            trackingValue = deltaValue
+        if thumbLayer.highlighted {
+            self.trackingValue = getValue(touch)
+            
+            let clampedValue = clamp(self.trackingValue, lower: minimumValue, upper: maximumValue)
+            let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x, newMax: bounds.size.width)
+            
+            self.updateFrameThumb(positionX: positionX, value: self.trackingValue, animated: false)
+            self.continueTracking(self.trackingValue)
         }
-        return thumbTrackingLayer.highlighted
+        return thumbLayer.highlighted
     }
     
     func getValue(_ touch: UITouch) -> CGFloat {
         let location = touch.location(in: self)
+        
         let clampedX = clamp(location.x, lower: bounds.origin.x + thumbWidth / 3.5, upper: bounds.size.width - thumbWidth / 3.5)
         let deltaLocation = CGPoint(x: clampedX, y: location.y)
         let deltaValue = rangeMap(deltaLocation.x, min: bounds.origin.x + thumbWidth / 3.5, max: bounds.size.width - thumbWidth / 3.5, newMin: minimumValue, newMax: maximumValue)
-        previousTrackingLocation = deltaLocation
         return deltaValue
         
     }
     
-    override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
-        hideThumbTracking(true, delay: true)
-        thumbTrackingLayer.highlighted = false
-        thumbWidth = thumbWidth / thumbScale
-        self.value = trackingValue
-        sendActions(for: .touchUpInside)
-    }
-    
-     override func cancelTracking(with event: UIEvent?) {
+    override  func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        print("endTracking")
         thumbLayer.highlighted = false
         thumbWidth = thumbWidth / thumbScale
-        hideThumbTracking(true)
+        value = self.trackingValue
+        sendActions(for: .touchUpInside)
+        stopReceiveValue()
+        self.endTracking(self.value)
+        
+    }
+    
+    override func cancelTracking(with event: UIEvent?) {
+        print("cancelTracking")
+        thumbLayer.highlighted = false
+        thumbWidth = thumbWidth / thumbScale
         sendActions(for: .touchCancel)
     }
     
+    
     // MARK: - Private Methods -
+    
+    private func stopReceiveValue() {
+        isEndTracking = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.isEndTracking = false
+        }
+    }
     
     private func commonInit() {
         
@@ -299,51 +295,36 @@ class ScrubberThumb: CALayer {
         
         layer.addSublayer(valueDisplayLayer)
         
-        layer.addSublayer(thumbTrackingLayer)
-        updateFrameThumbTrackingLayer()
         updateFrames()
     }
     
-    private func hideThumbTracking(_ hide : Bool, delay : Bool = false){
+    func updateFrameThumb(positionX: CGFloat, value: CGFloat, animated: Bool = true) {
         let action = {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.thumbLayer.isHidden = !hide
-            self.thumbTrackingLayer.isHidden = hide
-            self.thumbLayer.setNeedsLayout()
-            self.thumbTrackingLayer.setNeedsLayout()
-            CATransaction.commit()
-        }
-        if delay {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { action() }
+            let thumbCenter = CGPoint(x: positionX - self.thumbWidth / 2.0, y: self.bounds.midY)
+            let thumbSize = self.thumbWidth * 1.0
+            let thumbRadius = thumbSize / 2.0
+            let rect = CGRect(x: 0.0, y: self.bounds.height / 2.0, width: self.bounds.width, height: self.trackHeight)
+            self.thumbLayer.frame = CGRect(x: thumbCenter.x, y: rect.midY - thumbRadius , width: thumbSize, height: thumbSize)
+            self.thumbLayer.cornerRadius = thumbRadius
+            self.thumbLayer.setNeedsDisplay()
             
+            self.valueDisplayLayer.string = self.formatValueDisplay(value)
+            let valueSize = (self.valueDisplayLayer.string as! NSString).size(withAttributes: [NSAttributedString.Key.font: self.displayTextFont])
+            let valueWidth = max(valueSize.width, 50)
+            let valueHeight = valueSize.height + self.valueDisplayLayer.arrowSize.height + 20
+            let offsetY = (self.bounds.height - thumbSize) / 2.0 - 5
+            self.valueDisplayLayer.frame = CGRect(x: self.thumbLayer.frame.origin.x - valueWidth / 2 + thumbRadius,
+                                                  y: offsetY - valueHeight,
+                                                  width: valueWidth,
+                                                  height: valueHeight)
+            self.valueDisplayLayer.setNeedsDisplay()
         }
-        else { action() }
-    }
-    
-    private func updateFrameThumbTrackingLayer() {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        let thumbCenter = CGPoint(x: previousTrackingLocation.x - self.thumbWidth / 2.0, y: self.bounds.midY)
-        let thumbSize = self.thumbWidth * 1.0
-        let thumbRadius = thumbSize / 2.0
-        let rect = CGRect(x: 0.0, y: self.bounds.height / 2.0, width: self.bounds.width, height: self.trackHeight)
-        self.thumbTrackingLayer.frame = CGRect(x: thumbCenter.x, y: rect.midY - thumbRadius , width: thumbSize, height: thumbSize)
-        self.thumbTrackingLayer.cornerRadius = thumbRadius
-        self.thumbTrackingLayer.setNeedsDisplay()
-        
-        
-        self.valueDisplayLayer.string = self.formatValueDisplay(self.trackingValue)
-        let valueSize = (self.valueDisplayLayer.string as! NSString).size(withAttributes: [NSAttributedString.Key.font: self.displayTextFont])
-        let valueWidth = max(valueSize.width, 70)
-        let valueHeight = valueSize.height + self.valueDisplayLayer.arrowSize.height + 20
-        let offsetY = (self.bounds.height - thumbSize) / 2.0 - 5
-        self.valueDisplayLayer.frame = CGRect(x: self.thumbTrackingLayer.frame.origin.x - valueWidth / 2 + thumbRadius,
-                                         y: offsetY - valueHeight,
-                                         width: valueWidth,
-                                         height: valueHeight)
-        self.valueDisplayLayer.setNeedsDisplay()
-        CATransaction.commit()
+        if animated { action() }
+        else {
+            CATransaction.setDisableActions(true)
+            action()
+            CATransaction.setDisableActions(false)
+        }
     }
     
     private func updateFrames() {
@@ -352,16 +333,15 @@ class ScrubberThumb: CALayer {
         self.trackLayer.frame = CGRect(x: 0.0, y: self.bounds.height / 2.0, width: self.bounds.width, height: self.trackHeight)
         self.trackLayer.cornerRadius = self.trackHeight / 2.0
         self.trackLayer.setNeedsDisplay()
-        let thumbCenter = CGPoint(x: self.previousLocation.x - self.thumbWidth / 2.0, y: self.bounds.midY)
-        let thumbSize = self.thumbWidth * 1.0
-        let thumbRadius = thumbSize / 2.0
-        self.thumbLayer.frame = CGRect(x: thumbCenter.x, y: self.trackLayer.frame.midY - thumbRadius , width: thumbSize, height: thumbSize)
-        self.thumbLayer.cornerRadius = thumbRadius
-        self.thumbLayer.setNeedsDisplay()
-        self.trackFillLayer.frame = CGRect(origin: self.trackLayer.frame.origin, size: CGSize(width: thumbCenter.x + thumbSize, height: self.trackHeight))
+        
+        if !thumbLayer.highlighted {
+            updateFrameThumb(positionX: self.previousLocation.x, value: self.value)
+        }
+        
+        self.trackFillLayer.frame = CGRect(origin: self.trackLayer.frame.origin, size: CGSize(width: self.previousLocation.x, height: self.trackHeight))
         self.trackFillLayer.cornerRadius = self.trackHeight / 2.0
         self.trackFillLayer.setNeedsDisplay()
         CATransaction.commit()
     }
-   
+    
 }

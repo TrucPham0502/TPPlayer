@@ -19,24 +19,25 @@ class PlayPauseButton: UIImageView {
     var tap : (PlayPauseButton) -> () = {_ in }
     var buttonState: ButtonState = .play {
         didSet {
-            UIView.animate(withDuration: 0.2, animations: {
-                let extendedFrame = self.frame.insetBy(dx: -10, dy: -10)
-                self.frame = extendedFrame
-                self.alpha = 0
-            }, completion:{(finished) in
-                switch self.buttonState {
-                case .pause:
-                    self.image = UIImage(named: "ic_pause")
-                default:
-                    self.image = UIImage(named: "ic_play")
-                }
-                UIView.animate(withDuration: 0.2,animations:{
-                    let extendedFrame = self.frame.insetBy(dx: 10, dy: 10)
+            if oldValue != buttonState {
+                UIView.animate(withDuration: 0.2, animations: {
+                    let extendedFrame = self.frame.insetBy(dx: -10, dy: -10)
                     self.frame = extendedFrame
-                    self.alpha = 1
-                },completion:nil)
-            })
-            
+                    self.alpha = 0
+                }, completion:{(finished) in
+                    switch self.buttonState {
+                    case .pause:
+                        self.image = UIImage(named: "ic_pause")
+                    default:
+                        self.image = UIImage(named: "ic_play")
+                    }
+                    UIView.animate(withDuration: 0.2,animations:{
+                        let extendedFrame = self.frame.insetBy(dx: 10, dy: 10)
+                        self.frame = extendedFrame
+                        self.alpha = 1
+                    },completion:nil)
+                })
+            }
         }
     }
     override init(frame: CGRect) {

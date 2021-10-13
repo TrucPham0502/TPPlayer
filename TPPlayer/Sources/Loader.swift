@@ -34,13 +34,13 @@ class Loader: UIView {
         super.init(coder: aDecoder)
 
         self.layer.addSublayer(progressLayer)
+        
         backgroundColor = .clear
         updatePath()
     }
 
     override  func layoutSubviews() {
         super.layoutSubviews()
-
         progressLayer.frame = bounds
         updatePath()
     }
@@ -112,8 +112,9 @@ class Loader: UIView {
 
         progressLayer.path = path.cgPath
 
-        progressLayer.strokeColor = tintColor.cgColor
+       
         progressLayer.fillColor = backgroundColor?.cgColor
+        progressLayer.strokeColor = tintColor.cgColor
         progressLayer.lineWidth = lineWidth
         progressLayer.strokeStart = 0.0
         progressLayer.strokeEnd = 0.0

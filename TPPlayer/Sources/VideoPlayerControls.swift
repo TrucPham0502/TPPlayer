@@ -9,10 +9,8 @@ import Foundation
 import UIKit
 import AVFoundation
 protocol VideoPlayerControlsDelegate : AnyObject {
-    func videoPlayerControls(_ view : VideoPlayerControls, shouldFastForward millisecond: Int) -> Bool
-    func videoPlayerControls(_ view : VideoPlayerControls, shouldRewind millisecond: Int) -> Bool
-    func videoPlayerControls(_ view : VideoPlayerControls, play button : PlayPauseButton, isPlay : Bool)
-    func videoPlayerControls(_ view : VideoPlayerControls, seek millisecond : Int)
+    func videoPlayerControls(_ view : VideoPlayerControls, play button : PlayPauseButton)
+    func videoPlayerControls(_ view : VideoPlayerControls, seek second : Double)
     func videoPlayerControls(next view : VideoPlayerControls)
     func videoPlayerControls(prev view : VideoPlayerControls)
     func videoPlayerControls(_ view : VideoPlayerControls, resize button : ResizeButton)
@@ -21,17 +19,11 @@ protocol VideoPlayerControlsDelegate : AnyObject {
 
 
 class VideoPlayerControls : UIView {
-    var i : Int = 5
-    @objc func fireTimer() {
-        let value = self.progressSlider.value
-        
-        seek(to: Int(value * CGFloat(videoLength)) + i)
-    }
     // MARK: Properties
     private lazy var rippleRewind : CircleRippleView = {
-        let timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
         let v =  CircleRippleView()
         v.alpha = 0
+        v.tag = -1
         v.translatesAutoresizingMaskIntoConstraints = false
         v.isUserInteractionEnabled = true
         v.position = .left
@@ -41,6 +33,7 @@ class VideoPlayerControls : UIView {
     private lazy var rippleFastForward : CircleRippleView = {
         let v =  CircleRippleView()
         v.alpha = 0
+        v.tag = -1
         v.translatesAutoresizingMaskIntoConstraints = false
         v.isUserInteractionEnabled = true
         v.backgroundColor = .black.withAlphaComponent(0.1)
@@ -65,11 +58,14 @@ class VideoPlayerControls : UIView {
         v.thumbColor = UIColor.white.cgColor
         v.trackFillColor = UIColor.orange.cgColor
         v.thumbScale = 1.5
+        v.continueTracking = {_ in
+            self.isInteracting = false
+        }
         v.tag = 1
         v.displayValueBackgroudColor = .black.withAlphaComponent(0.7)
         v.formatValueDisplay = { value in
             let second = value * CGFloat(self.videoLength)
-            return self.timeFormatted(totalSeconds: Int(second))
+            return self.timeFormatted(totalSeconds: Double(second))
         }
         v.isUserInteractionEnabled = false
         v.addTarget(self, action: #selector(progressSliderTouchEnd(slider:)), for: [.touchUpInside])
@@ -137,12 +133,19 @@ class VideoPlayerControls : UIView {
     
     
     // MARK: Variables
-    private var videoLength : Int = 0
-    private let timeFastForward : Int = 5
+    var backgroundControlColor : UIColor = .black.withAlphaComponent(0.5)
+    var isHiddenControl : Bool = false {
+        didSet {
+            if isHiddenControl { self.hideAllControls() }
+            else { self.showAllControls() }
+        }
+    }
+
+    private var videoLength : Double = 0
+    private let timeFastForward : Double = 5
     weak var delegate : VideoPlayerControlsDelegate?
     private var forwardToggleWorkItem: DispatchWorkItem?
     private var rewindToggleWorkItem: DispatchWorkItem?
-    var videoIsPlaying : () -> Bool = { return false }
     var playPauseButtonConstant : AppConstants = .init()
     var nextButtonConstant : AppConstants = .init()
     var previousButtonConstant : AppConstants = .init()
@@ -152,7 +155,7 @@ class VideoPlayerControls : UIView {
     var speedButtonConstant : AppConstants = .init()
     var progressSliderConstant : AppConstants = .init()
     
-    private var timeForward : Int = 0 {
+    private var timeForward : Double = 0 {
         didSet {
             if timeForward > 0 {
                 hideAllControls(animated: false)
@@ -160,19 +163,21 @@ class VideoPlayerControls : UIView {
                 setRewindAlpha(0)
                 setForwardAlpha(1)
                 if oldValue != timeForward {
-                    seek(to: getCurrentTime() + abs(oldValue - timeForward))
+                    let time = getCurrentTime() + abs(oldValue - timeForward)
+                    seek(to: time)
                     self.rippleFastForward.setText(timeForward)
+                    delegate?.videoPlayerControls(self, seek: time)
                 }
             }
             else if timeRewind == 0 {
-                showAllControls()
+                isHiddenControl = false
                 setForwardAlpha(0)
             }
-           
+           isInteracting = false
         }
     }
     
-    private var timeRewind: Int = 0 {
+    private var timeRewind: Double = 0 {
         didSet {
             if timeRewind > 0 {
                 hideAllControls(animated: false)
@@ -180,15 +185,17 @@ class VideoPlayerControls : UIView {
                 setRewindAlpha(1)
                 setForwardAlpha(0)
                 if oldValue != timeRewind {
-                    seek(to: getCurrentTime() - abs(oldValue - timeRewind))
+                    let time = getCurrentTime() - abs(oldValue - timeRewind)
+                    seek(to: time)
                     self.rippleRewind.setText(timeRewind)
+                    delegate?.videoPlayerControls(self, seek: time)
                 }
             }
             else if timeForward == 0 {
-                showAllControls()
+                isHiddenControl = false
                 setRewindAlpha(0)
             }
-            
+            isInteracting = false
         }
     }
     
@@ -237,19 +244,17 @@ class VideoPlayerControls : UIView {
         self.startLoading()
     }
     
-    func readyToPlayVideo(_ videoLength: Int, currentTime: Int) {
+    func readyToPlayVideo(_ videoLength: Double, currentTime: Double) {
         self.configureInitialControlState(videoLength,currentTime: currentTime)
     }
     
-    func playingVideo(currentTime: Int){
+    func playingVideo(currentTime: Double){
         let progress : CGFloat = CGFloat(currentTime) / (videoLength != 0 ? CGFloat(videoLength) : 1.0)
-        if self.isInteracting == false {
-            self.progressSlider.value = progress
-        }
+        self.progressSlider.value = progress
         self.currentTimeLabel.text = String(format: "%@ / %@",self.timeFormatted(totalSeconds: currentTime), self.timeFormatted(totalSeconds: videoLength))
     }
     
-    func startedVideo(currentTime: Int) {
+    func startedVideo(currentTime: Double) {
         self.playPauseButton.buttonState = .pause
         self.configureInitialControlState(videoLength, currentTime: currentTime)
        
@@ -264,6 +269,7 @@ class VideoPlayerControls : UIView {
         
     }
     func error(_ error : Error) {
+        isHiddenControl = true
         print(error.localizedDescription)
     }
     
@@ -282,6 +288,9 @@ class VideoPlayerControls : UIView {
     func hideAllControls(animated: Bool = true, complete : ((Bool) -> ())? = nil){
         let action = {
             self.subviews.forEach({ if $0.tag > 0 { $0.alpha = 0.0 } })
+            self.backgroundColor = .clear
+            self.nextButton.isHidden = self.nextButtonHidden
+            self.previousButton.isHidden = self.previousButtonHidden
         }
         if animated {
             UIView.animate(withDuration: 0.3, animations: { action() }, completion: { finished in
@@ -296,6 +305,9 @@ class VideoPlayerControls : UIView {
     func showAllControls(animated: Bool = true, complete : ((Bool) -> ())? = nil) {
         let action = {
             self.subviews.forEach({ if ($0.tag > 0) {  $0.alpha = 1 } })
+            self.backgroundColor = self.backgroundControlColor
+            self.nextButton.isHidden = self.nextButtonHidden
+            self.previousButton.isHidden = self.previousButtonHidden
         }
         if animated {
             UIView.animate(withDuration: 0.3, animations: { action() }, completion: { finished in
@@ -342,6 +354,8 @@ class VideoPlayerControls : UIView {
     func hideCenterControl(animated: Bool = true, complete : ((Bool) -> ())? = nil){
         let action = {
             self.subviews.forEach({ if $0.tag == 2 { $0.alpha = 0 } })
+            self.nextButton.isHidden = self.nextButtonHidden
+            self.previousButton.isHidden = self.previousButtonHidden
         }
         if animated {
             UIView.animate(withDuration: 0.3, animations: { action() }, completion: { finished in
@@ -357,6 +371,8 @@ class VideoPlayerControls : UIView {
     func showCenterControl(animated: Bool = true, complete : ((Bool) -> ())? = nil){
         let action = {
             self.subviews.forEach({ if $0.tag == 2 { $0.alpha = 1 } })
+            self.nextButton.isHidden = self.nextButtonHidden
+            self.previousButton.isHidden = self.previousButtonHidden
         }
         if animated {
             UIView.animate(withDuration: 0.3, animations: { action() }, completion: { finished in
@@ -369,11 +385,17 @@ class VideoPlayerControls : UIView {
         }
     }
     
-    func seek(to second : Int){
+    func seek(to second : Double){
         let value : CGFloat = CGFloat(second) / CGFloat(videoLength)
         self.progressSlider.value = value
     }
     
+    func isInteracting(_ touch : UITouch) -> Bool{
+        let position = touch.location(in: self)
+        return self.subviews.first(where: {
+            return ($0.tag > 0) && $0.alpha > 0 && !$0.isHidden && $0.frame.contains(position)
+        }) != nil
+    }
     
     // MARK: - Private methods -
     private func setRewindAlpha(_ alpha : CGFloat) {
@@ -400,20 +422,15 @@ class VideoPlayerControls : UIView {
         self.rippleRewind.isHidden = false
     }
     
-    private func getCurrentTime() -> Int {
+    private func getCurrentTime() -> Double {
         let value = self.progressSlider.value
         let time = value * CGFloat(videoLength)
-        return min(videoLength , Int(time))
+        return min(videoLength , Double(time))
     }
     
     private func playButtonPressed() {
-        if self.videoIsPlaying() {
-            isInteracting = true
-        }
-        else {
-            isInteracting = false
-        }
-        self.delegate?.videoPlayerControls(self, play: self.playPauseButton, isPlay: self.videoIsPlaying())
+        isInteracting = false
+        self.delegate?.videoPlayerControls(self, play: self.playPauseButton)
        
     }
     @objc private func nextButtonPressed() {
@@ -426,7 +443,7 @@ class VideoPlayerControls : UIView {
     }
     
     @objc private func progressSliderBeginTouch() {
-        isInteracting = true
+        isInteracting = false
     }
     
     @objc private func resizeButtonPressed() {
@@ -436,28 +453,24 @@ class VideoPlayerControls : UIView {
     
     @objc private func progressSliderChanged(slider: Scrubber) {
         let second = Double(slider.value) * Double(videoLength)
-        self.playingVideo(currentTime: Int(second))
+        self.playingVideo(currentTime: second)
     }
     
     @objc private func progressSliderTouchEnd(slider: Scrubber) {
-        seek(value: Double(slider.value))
-        perform(#selector(setter: isInteracting), with: false, afterDelay: 0.1)
+        let second = Double(slider.value) * videoLength
+        self.delegate?.videoPlayerControls(self, seek: second)
+        isInteracting = false
     }
     
     
-    private func seek(value: Double) {
-        let second = value * Double(videoLength)
-        self.delegate?.videoPlayerControls(self, seek: Int(second*1000))
-    }
-    
-    private func timeFormatted(totalSeconds: Int) -> String {
-        let seconds = totalSeconds % 60
-        let minutes = (totalSeconds / 60) % 60
+    private func timeFormatted(totalSeconds: Double) -> String {
+        let seconds = Int(totalSeconds) % 60
+        let minutes = (Int(totalSeconds) / 60) % 60
 //        let hours = totalSeconds / 3600
         
         return String(format: "%01d:%02d", minutes, seconds)
     }
-    private func configureInitialControlState(_ videoLength: Int, currentTime: Int) {
+    private func configureInitialControlState(_ videoLength: Double, currentTime: Double) {
         self.videoLength = videoLength
         progressSlider.isUserInteractionEnabled = true
         
@@ -465,7 +478,7 @@ class VideoPlayerControls : UIView {
         self.stopLoading()
     }
     
-    @objc private func doubleTapControl(_ sender : UITapGestureRecognizer){
+     func doubleTapControl(_ sender : UITapGestureRecognizer){
         let time = getCurrentTime()
         if self.rippleRewind.frame.contains(sender.location(in: self)) {
             rewindToggleWorkItem?.cancel()
@@ -504,54 +517,17 @@ class VideoPlayerControls : UIView {
         
     }
     @objc private func rotated(_ sender : Any?){
-        showAllControls()
+        isHiddenControl = false
     }
-//    @objc private func toggleControls(_ sender : UITapGestureRecognizer){
-//
-//        if !(sender.view is Self) && self.videoIsPlaying() {
-//            hideAllControls()
-//        } else {
-//            controlsToggleWorkItem?.cancel()
-//            controlsToggleWorkItem = DispatchWorkItem(block: { [weak self] in
-//                self?.hideAllControls()
-//            })
-//            showAllControls()
-//            if self.videoIsPlaying() {
-//                DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3), execute: controlsToggleWorkItem!)
-//            }
-//        }
-//    }
+
   
     private func commonInit() {
         [rippleRewind, rippleFastForward, progressLoader, progressSlider, nextButton, previousButton, currentTimeLabel, resizeButton, speedButton, playPauseButton].forEach({addSubview($0)})
         
         NotificationCenter.default.addObserver(self, selector: #selector(rotated), name: UIDevice.orientationDidChangeNotification, object: nil)
         
-//        self.interacting = { [weak self] (isInteracting) in
-//            guard let strongSelf = self else { return }
-//            strongSelf.controlsToggleWorkItem?.cancel()
-//            strongSelf.controlsToggleWorkItem = DispatchWorkItem(block: {
-//                strongSelf.hideAllControls()
-//            })
-//
-//            if isInteracting == true {
-//                strongSelf.showAllControls()
-//            } else {
-//                if strongSelf.videoIsPlaying() {
-//                    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3), execute: strongSelf.controlsToggleWorkItem!)
-//                }
-//            }
-//        }
-        
-//        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
-//        tapGestureRecognizer.delegate = self
-//        addGestureRecognizer(tapGestureRecognizer)
         
         
-        let doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(doubleTapControl))
-        doubleTapGestureRecognizer.delegate = self
-        doubleTapGestureRecognizer.numberOfTapsRequired = 2
-        addGestureRecognizer(doubleTapGestureRecognizer)
         setupLayout()
     }
     private func getSize(_ value : CGFloat) -> CGFloat {
@@ -589,7 +565,7 @@ class VideoPlayerControls : UIView {
         
         
         currentTimeLabelConstant = .init(
-            left: self.currentTimeLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: getSize(32)), bottom: self.currentTimeLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: getSize(-16)), width: self.currentTimeLabel.widthAnchor.constraint(equalToConstant: 100),
+            left: self.currentTimeLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: getSize(32)), bottom: self.currentTimeLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: getSize(-16)), width: self.currentTimeLabel.widthAnchor.constraint(equalToConstant: 90),
             height:  self.currentTimeLabel.heightAnchor.constraint(equalTo: self.progressSlider.heightAnchor))
         
         
@@ -630,11 +606,13 @@ class VideoPlayerControls : UIView {
         
     }
     
-    
+    func isRippleView(_ touch : UITouch) -> Bool {
+        return self.rippleRewind.frame.contains(touch.location(in: self)) || self.rippleFastForward.frame.contains(touch.location(in: self))
+    }
 }
 extension VideoPlayerControls : UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        if touch.view?.tag ?? 0 == 0 {
+        if  touch.view?.tag ?? 0 == -1 {
             return true
         }
         return false
