@@ -8,7 +8,28 @@
 import Foundation
 import AVKit
 import UIKit
+typealias VideoPlayerType = VideoPlayerDataSource & UIView
+protocol VideoPlayerDataSource {
+    var delegate : VideoPlayerDelegate? {get set}
+    var currentTime: Double { get }
+    var videoLength : Double { get }
+    var shouldLoop: Bool { get }
+    func setVideo(url : String)
+    func setVideo(url : URL)
+    func playVideo()
+    func stopVideo()
+    func pauseVideo()
+    func seek(to second: Double)
+}
 
+protocol VideoPlayerDelegate : AnyObject {
+    func readyToPlayVideo(_ videoLength: Double, currentTime: Int)
+    func error(_ error : Error)
+    func playing(_ time : Double)
+    func seekStarted()
+    func seekEnded()
+    func didFinishPlaying(_ shouldLoop: Bool)
+}
 public enum PlayerStatus {
     case new
     case readyToPlay
@@ -56,21 +77,17 @@ class VideoPlayerView : UIView {
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
-    private lazy var videoPlayerLayer : AVPlayerLayer = {
-        let v = AVPlayerLayer()
-        v.videoGravity = AVLayerVideoGravity.resizeAspect
-        v.player = player
-        v.contentsScale = UIScreen.main.scale
-        return v
+    private var _player : VideoPlayerType!
+    private lazy var videoPlayerLayer : VideoPlayerType = {
+        guard var _player = _player else { fatalError("can't get video player") }
+        _player.delegate = self
+        return _player
     }()
-    private lazy var player : AVPlayer = {
-        let v = AVPlayer()
-        return v
-    }()
+    
     private lazy var videoPlayerContainer : UIView = {
         let v = UIView()
         v.backgroundColor = .black
-        v.layer.addSublayer(videoPlayerLayer)
+        v.addSubview(videoPlayerLayer)
         return v
     }()
     private lazy var videoControl : VideoPlayerControls = {
@@ -110,45 +127,28 @@ class VideoPlayerView : UIView {
                 videoControl.error(videoError)
                 return
             }
-            
-            let asset = AVAsset(url: url)
-            setVideoAsset(asset: asset)
+            setVideoURL(url: url)
         }
     }
-    var videoAsset: AVAsset? = nil {
-        didSet {
-            guard let asset = videoAsset else {
-                status = .error
-                
-                let userInfo = [NSLocalizedDescriptionKey: "Video asset is invalid."]
-                let videoError = NSError(domain: "videoplayer", code: 99, userInfo: userInfo)
-                videoControl.error(videoError)
-                return
-            }
-            
-            setVideoAsset(asset: asset)
-        }
-    }
+    
     var currentTime: Double {
-        if let time = player.currentItem?.currentTime() {
-            return time.seconds
-        }
-        
-        return 0.0
+        videoPlayerLayer.currentTime
     }
     var videoLength: Double {
-        if let duration = player.currentItem?.asset.duration {
-            return duration.seconds
-        }
-        
-        return 0.0
+        videoPlayerLayer.videoLength
     }
     
     var animationViewtype : AnimationViewInfo = .move(100)
     
-    override init(frame: CGRect) {
+    init(player : VideoPlayerType, frame : CGRect = .zero) {
+        self._player = player
         super.init(frame: frame)
         prepareUI()
+    }
+    
+    private override init(frame: CGRect) {
+        self._player = AppAVPlayer()
+        super.init(frame: frame)
     }
     
     public required init?(coder aDecoder: NSCoder) {
@@ -174,26 +174,7 @@ class VideoPlayerView : UIView {
         super.layoutSubviews()
         videoPlayerLayer.frame = videoPlayerContainer.bounds
     }
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
-        guard let asset = object as? AVPlayerItem, let keyPath = keyPath else { return }
-        
-        if asset == player.currentItem && keyPath == "status" {
-            if asset.status == .readyToPlay {
-                if status == .new {
-                    status = .readyToPlay
-                }
-                addTimeObserver()
-                videoControl.readyToPlayVideo(videoLength, currentTime: 0)
-            } else if asset.status == .failed {
-                status = .error
-                
-                let userInfo = [NSLocalizedDescriptionKey: "Error loading video."]
-                let videoError = NSError(domain: "videoplayer", code: 99, userInfo: userInfo)
-                videoControl.error(videoError)
-                
-            }
-        }
-    }
+
     private func prepareUI(){
         self.addSubview(videoPlayerContainer)
         self.addSubview(videoControl)
@@ -218,19 +199,6 @@ class VideoPlayerView : UIView {
         panGesture.delegate = self
         doubleTapGestureRecognizer.require(toFail: panGesture)
         
-//        videoInfoViewConstaints = .init(
-//            left: self.viewInfo.leadingAnchor.constraint(equalTo: self.leadingAnchor),
-//            right: self.viewInfo.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-//            top:  self.viewInfo.topAnchor.constraint(equalTo: self.bottomAnchor),
-//            height: self.viewInfo.heightAnchor.constraint(equalToConstant: 150))
-        
-//        NSLayoutConstraint.activate([
-//            self.videoControl.topAnchor.constraint(equalTo: self.topAnchor),
-//            self.videoControl.leadingAnchor.constraint(equalTo: self.leadingAnchor),
-//            self.videoControl.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-//            self.videoControl.bottomAnchor.constraint(equalTo: self.bottomAnchor)
-//        ])
-//        videoInfoViewConstaints.active()
     }
     
     @objc func draggedView(_ recognizer : UIPanGestureRecognizer){
@@ -359,102 +327,43 @@ class VideoPlayerView : UIView {
     }
     
     @objc func playVideo() {
-        guard let playerItem = player.currentItem else { return }
-        
         if progress >= 1.0 {
             seekToZero()
         }
-        
-        status = .playing
-        videoControl.startedVideo(currentTime: 0.0)
-        player.rate = preferredRate
-        
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(itemDidFinishPlaying(_:)) , name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
+        videoPlayerLayer.playVideo()
     }
-    @objc func itemDidFinishPlaying(_ notification: Notification) {
-        let currentItem = player.currentItem
-        let notificationObject = notification.object as? AVPlayerItem
-        
-        if currentItem == notificationObject && shouldLoop == true {
-            status = .playing
-            seekToZero()
-            player.rate = preferredRate
-        } else {
-            stopVideo()
-        }
-    }
+    
     func stopVideo() {
-        player.rate = 0.0
+        videoPlayerLayer.stopVideo()
         seekToZero()
         status = .stopped
         videoControl.stoppedVideo()
     }
     private func seekToZero() {
         progress = 0.0
-        let time = CMTime(seconds: 0.0, preferredTimescale: 1)
-        player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+        videoPlayerLayer.seek(to: 0.0)
         videoControl.seek(to: 0.0)
     }
     func pauseVideo() {
-        player.rate = 0.0
+        videoPlayerLayer.pauseVideo()
         status = .paused
         videoControl.pausedVideo()
     }
     func seek(_ second: Double) {
-        guard let currentItem = player.currentItem else { return }
         if second == 0.0 {
             seekToZero()
         } else {
-            let time = CMTime(seconds: second, preferredTimescale: currentItem.asset.duration.timescale)
-            player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] (finished) in
-                guard let strongSelf = self else { return }
-                
-                if finished == false {
-                    strongSelf.videoControl.seekStarted()
-                } else {
-                    strongSelf.videoControl.seekEnded()
-                }
-            })
+            videoPlayerLayer.seek(to: second)
         }
     }
     
-    func setBackground(_ image : UIImage){
-        self.videoPlayerLayer.contents = image.cgImage
-    }
-    private func setVideoAsset(asset: AVAsset) {
-        let playerItem = AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: ["duration", "tracks"])
-        
-        deinitObservers()
-        player.replaceCurrentItem(with: playerItem)
-        player.currentItem?.addObserver(self, forKeyPath: "status", options: [], context: nil)
+    private func setVideoURL(url: URL) {
+        videoPlayerLayer.setVideo(url: url)
         videoControl.newVideo()
         status = .new
     }
-    private func addTimeObserver() {
-        if let observer = timeObserver {
-            player.removeTimeObserver(observer)
-        }
-        
-        timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.01, preferredTimescale: Int32(NSEC_PER_SEC)), queue: nil, using: { [weak self] (time) in
-            guard let strongSelf = self, strongSelf.status == .playing else { return }
-            
-            let currentTime = time.seconds
-            strongSelf.videoControl.seek(to: currentTime)
-            
-        }) as AnyObject?
-    }
-    private func deinitObservers() {
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
-        if let video = player.currentItem, video.observationInfo != nil {
-            video.removeObserver(self, forKeyPath: "status")
-        }
-        
-        if let observer = timeObserver {
-            player.removeTimeObserver(observer)
-            timeObserver = nil
-        }
-    }
+   
+    
     @objc private func toggleControls(_ sender : UITapGestureRecognizer){
         if !videoControl.isHiddenControl {
             videoControl.isHiddenControl = true
@@ -470,10 +379,6 @@ class VideoPlayerView : UIView {
         
     }
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-        deinitObservers()
-    }
 }
 extension VideoPlayerView : VideoPlayerControlsDelegate {
     
@@ -524,6 +429,43 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
     
     
 }
+extension VideoPlayerView : VideoPlayerDelegate {
+    func readyToPlayVideo(_ videoLength: Double, currentTime: Int) {
+        if status == .new {
+            status = .readyToPlay
+        }
+        videoControl.readyToPlayVideo(videoLength, currentTime: 0)
+    }
+    
+    func error(_ error: Error) {
+        status = .error
+        videoControl.error(error)
+    }
+    
+    func playing(_ time: Double) {
+        self.videoControl.seek(to: time)
+    }
+    
+    func seekStarted() {
+        self.videoControl.seekStarted()
+    }
+    
+    func seekEnded() {
+        self.videoControl.seekEnded()
+    }
+    
+    func didFinishPlaying(_ shouldLoop: Bool) {
+        if shouldLoop == true {
+            status = .playing
+            seekToZero()
+        } else {
+            stopVideo()
+        }
+    }
+    
+    
+}
+
 extension VideoPlayerView : UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         if let ges = gestureRecognizer as? UITapGestureRecognizer, ges.numberOfTapsRequired == 2 {
