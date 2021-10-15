@@ -20,19 +20,35 @@ public enum PlayerStatus {
 public enum AnimationViewInfo {
     case move(CGFloat), scale
 }
+public enum PlayerRotation {
+    case none
+    case left
+    case right
+    case upsideDown
+    
+    func radians() -> CGFloat {
+        switch self {
+        case .none:
+            return 0.0
+        case .left:
+            return .pi / 2.0
+        case .right:
+            return -.pi / 2.0
+        case .upsideDown:
+            return .pi
+        }
+    }
+}
 class VideoPlayerView : UIView {
     private enum DraggingState{
         case up, down, idle
     }
     var lastY : CGFloat = 0
-    var videoConstaints : AppConstants = .init()
     var viewInfoHeight : CGFloat = UIScreen.main.bounds.height / 2 {
         didSet {
             self.viewInfo.frame.size.height = viewInfoHeight
-            self.viewInfoFrame.size.height = viewInfoHeight
         }
     }
-//    var videoInfoViewConstaints : AppConstants = .init()
     private lazy var viewInfo : UIView = {
         let v = UIView()
         v.alpha = 0
@@ -53,6 +69,7 @@ class VideoPlayerView : UIView {
     }()
     private lazy var videoPlayerContainer : UIView = {
         let v = UIView()
+        v.backgroundColor = .black
         v.layer.addSublayer(videoPlayerLayer)
         return v
     }()
@@ -139,29 +156,19 @@ class VideoPlayerView : UIView {
         prepareUI()
     }
     
-    var videoControlFrame : CGRect = .zero {
-        didSet {
-            videoControl.frame = videoControlFrame
-        }
-    }
-    var videoPlayerLayerFrame : CGRect = .zero {
-        didSet {
-            videoPlayerContainer.frame = videoPlayerLayerFrame
-            
-        }
-    }
-    var viewInfoFrame : CGRect = .zero {
-        didSet {
-            viewInfo.frame = viewInfoFrame
-        }
-    }
+    private var defaultFrame : CGRect = .zero
+    private var smallRect : CGRect = .zero
     func setFrame(_ rect : CGRect) {
-        self.frame = rect
-        videoControlFrame = rect
-        videoPlayerLayerFrame = videoControl.frame
-        viewInfoFrame = .init(origin: .init(x: rect.origin.x, y: rect.maxY), size: .init(width: self.bounds.width, height: viewInfoHeight))
+        self.smallRect = rect
+        self.updateFrame(rect)
     }
     
+    private func updateFrame(_ rect : CGRect){
+        defaultFrame = rect
+        videoControl.frame = rect
+        videoPlayerContainer.frame = videoControl.frame
+        resetLayout()
+    }
     
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -252,13 +259,13 @@ class VideoPlayerView : UIView {
         case .scale:
             let d = min(abs(dy - self.lastY), self.viewInfoHeight)
             switch self.dragDirection(velocity) {
-            case .up where self.viewInfo.frame.minY > self.videoControlFrame.maxY - self.viewInfoHeight:
+            case .up where self.viewInfo.frame.minY > self.defaultFrame.maxY - self.viewInfoHeight:
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y - d
                 
                 self.videoControl.frame.size.height = self.videoControl.bounds.height - d
                 
                 self.viewInfo.alpha = 1
-            case .down where self.viewInfo.frame.minY < self.videoControlFrame.maxY:
+            case .down where self.viewInfo.frame.minY < self.defaultFrame.maxY:
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y + d
                 
@@ -268,9 +275,9 @@ class VideoPlayerView : UIView {
             default:
                 break
             }
-            self.videoPlayerLayerFrame = self.videoControl.frame
+            self.videoPlayerContainer.frame = self.videoControl.frame
         case .move(let topOffset):
-            let maxDY = self.videoControlFrame.minY - topOffset
+            let maxDY = self.defaultFrame.minY - topOffset
             let d = min(abs(dy - self.lastY), maxDY)
             switch self.dragDirection(velocity) {
             case .up where self.videoControl.frame.minY > topOffset:
@@ -280,7 +287,7 @@ class VideoPlayerView : UIView {
                 
                 self.videoControl.frame.origin.y =  self.videoControl.frame.minY - d
                 
-            case .down where self.videoControl.frame.minY < self.videoControlFrame.minY:
+            case .down where self.videoControl.frame.minY < self.defaultFrame.minY:
                 self.viewInfo.alpha = max(0,(maxDY - abs(dy))/maxDY)
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y + d
@@ -305,29 +312,26 @@ class VideoPlayerView : UIView {
                 switch self.dragDirection(velocity) {
                 case .up:
                     self.viewInfo.alpha = 1
-                    self.viewInfo.frame.origin.y = self.videoControlFrame.maxY - self.viewInfoHeight
-                    self.videoControl.frame.size.height = self.videoControlFrame.height - self.viewInfoHeight
+                    self.viewInfo.frame.origin.y = self.defaultFrame.maxY - self.viewInfoHeight
+                    self.videoControl.frame.size.height = self.defaultFrame.height - self.viewInfoHeight
                 case .down:
-                    self.viewInfo.alpha = 0
-                    self.viewInfo.frame = self.viewInfoFrame
-                    self.videoControl.frame = self.videoControlFrame
+                    self.resetLayout()
                 default:
                     break
                 }
-                self.videoPlayerLayerFrame = self.videoControl.frame
+                self.videoPlayerContainer.frame = self.videoControl.frame
             }
         case .move(let topOffset):
             UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut]) {
                 switch self.dragDirection(velocity) {
                 case .up:
-                    let d = self.videoControlFrame.minY - topOffset
+                    let d = self.defaultFrame.minY - topOffset
                     self.viewInfo.alpha = 1
-                    self.viewInfo.frame.origin.y = self.viewInfoFrame.minY - d
-                    self.videoControl.frame.origin.y = self.videoControlFrame.minY - d
+                    self.videoControl.frame.origin.y = self.defaultFrame.minY - d
+                    self.viewInfo.frame.origin.y = self.defaultFrame.maxY - d
+                    
                 case .down:
-                    self.viewInfo.alpha = 0
-                    self.viewInfo.frame = self.viewInfoFrame
-                    self.videoControl.frame = self.videoControlFrame
+                    self.resetLayout()
                 default:
                     break
                 }
@@ -335,6 +339,11 @@ class VideoPlayerView : UIView {
             }
         }
         
+    }
+    private func resetLayout(){
+        self.viewInfo.alpha = 0
+        self.viewInfo.frame  = .init(origin: .init(x: defaultFrame.origin.x, y: defaultFrame.maxY), size: .init(width: defaultFrame.width, height: viewInfoHeight))
+        self.videoControl.frame = self.defaultFrame
     }
     private func dragDirection(_ velocity: CGPoint) -> DraggingState{
         if velocity.y < 0 {
@@ -409,10 +418,7 @@ class VideoPlayerView : UIView {
             })
         }
     }
-    func setConstaints(_ constaints: AppConstants){
-        constaints.active()
-        self.videoConstaints = constaints
-    }
+    
     func setBackground(_ image : UIImage){
         self.videoPlayerLayer.contents = image.cgImage
     }
@@ -495,12 +501,25 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
     
     func videoPlayerControls(_ view: VideoPlayerControls, resize button: ResizeButton) {
         print("resize")
-        switch button.buttonState {
-        case .large:
-            self.videoConstaints.height?.constant = UIScreen.main.bounds.height
-        case .small:
-            self.videoConstaints.width?.constant = 300
+        UIView.animate(withDuration: 0.3) {
+            self.resetLayout()
+            switch button.buttonState {
+            case .large:
+                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.left.radians())
+                self.frame = .init(origin: .zero, size: .init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
+                self.updateFrame(self.bounds)
+                self.animationViewtype = .scale
+                self.viewInfoHeight = UIScreen.main.bounds.width / 2
+            case .small:
+                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.none.radians())
+                self.frame = .init(origin: .zero, size: .init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
+                self.updateFrame(self.smallRect)
+                self.animationViewtype = .move(100)
+                self.viewInfoHeight = UIScreen.main.bounds.height / 2
+                
+            }
         }
+        
     }
     
     
@@ -510,6 +529,6 @@ extension VideoPlayerView : UIGestureRecognizerDelegate {
         if let ges = gestureRecognizer as? UITapGestureRecognizer, ges.numberOfTapsRequired == 2 {
             return videoControl.isRippleView(touch)
         }
-        return videoControl.isHiddenControl || !videoControl.isInteracting(touch)
+        return (videoControl.isHiddenControl || !videoControl.isInteracting(touch)) && self.videoPlayerContainer.frame.contains(touch.location(in: self))
     }
 }

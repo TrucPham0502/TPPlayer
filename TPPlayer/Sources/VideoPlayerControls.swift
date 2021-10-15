@@ -449,6 +449,7 @@ class VideoPlayerControls : UIView {
     @objc private func resizeButtonPressed() {
         isInteracting = false
         self.delegate?.videoPlayerControls(self, resize: self.resizeButton)
+        self.resizeButton.buttonState = self.resizeButton.buttonState == .small ? .large : .small
     }
     
     @objc private func progressSliderChanged(slider: Scrubber) {

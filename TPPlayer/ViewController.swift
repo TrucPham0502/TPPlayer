@@ -14,9 +14,6 @@ class ViewController: UIViewController {
         v.translatesAutoresizingMaskIntoConstraints = false
         v.newVideo()
         v.readyToPlayVideo(1000, currentTime: 0)
-        v.videoIsPlaying = {
-            return true
-        }
         return v
     }()
     
