@@ -299,14 +299,14 @@ class VideoPlayerView : UIView {
             let d = min(abs(dy - self.lastY), maxDY)
             switch self.dragDirection(velocity) {
             case .up where self.videoControl.frame.minY > topOffset:
-                self.viewInfo.alpha = min(1,abs(dy)/maxDY)
+                self.viewInfo.alpha = min(1,self.viewInfo.alpha + (d/maxDY))
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.minY - d
                 
                 self.videoControl.frame.origin.y =  self.videoControl.frame.minY - d
                 
             case .down where self.videoControl.frame.minY < self.defaulControltFrame.minY:
-                self.viewInfo.alpha = max(0,(maxDY - abs(dy))/maxDY)
+                self.viewInfo.alpha = max(0,self.viewInfo.alpha - (d/maxDY))
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y + d
                 
@@ -540,7 +540,7 @@ extension VideoPlayerView : UIGestureRecognizerDelegate {
         
         if let panGesture = gestureRecognizer as? UIPanGestureRecognizer {
             if videoPlayerContainer.zoomScale == videoPlayerContainer.minimumZoomScale {
-                let velocity = panGesture.velocity(in: gestureRecognizer.view)
+                let velocity = panGesture.velocity(in: panGesture.view)
                 return abs(velocity.y) >= abs(velocity.x)
             }
             return false
