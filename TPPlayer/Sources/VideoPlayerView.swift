@@ -140,7 +140,7 @@ class VideoPlayerView : UIView {
     
     var animationViewtype : AnimationViewInfo = .move(100)
     
-    init(player : VideoPlayerType, frame : CGRect = .zero) {
+    init(player : VideoPlayerType = AppAVPlayer(), frame : CGRect = .zero) {
         self._player = player
         super.init(frame: frame)
         prepareUI()
@@ -148,6 +148,7 @@ class VideoPlayerView : UIView {
     
     private override init(frame: CGRect) {
         self._player = AppAVPlayer()
+        self.defaulFrame = frame
         super.init(frame: frame)
     }
     
@@ -156,15 +157,22 @@ class VideoPlayerView : UIView {
         prepareUI()
     }
     
-    private var defaultFrame : CGRect = .zero
+    private var defaulControltFrame : CGRect = .zero
+    private var defaulFrame : CGRect = .zero
     private var smallRect : CGRect = .zero
-    func setFrame(_ rect : CGRect) {
+    
+    func setControlFrame(_ rect : CGRect) {
         self.smallRect = rect
         self.updateFrame(rect)
     }
     
+    func setFrame(frame : CGRect){
+        self.defaulFrame = frame
+        self.frame = frame
+    }
+    
     private func updateFrame(_ rect : CGRect){
-        defaultFrame = rect
+        defaulControltFrame = rect
         videoControl.frame = rect
         videoPlayerContainer.frame = videoControl.frame
         resetLayout()
@@ -227,13 +235,13 @@ class VideoPlayerView : UIView {
         case .scale:
             let d = min(abs(dy - self.lastY), self.viewInfoHeight)
             switch self.dragDirection(velocity) {
-            case .up where self.viewInfo.frame.minY > self.defaultFrame.maxY - self.viewInfoHeight:
+            case .up where self.viewInfo.frame.minY > self.defaulControltFrame.maxY - self.viewInfoHeight:
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y - d
                 
                 self.videoControl.frame.size.height = self.videoControl.bounds.height - d
                 
                 self.viewInfo.alpha = 1
-            case .down where self.viewInfo.frame.minY < self.defaultFrame.maxY:
+            case .down where self.viewInfo.frame.minY < self.defaulControltFrame.maxY:
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y + d
                 
@@ -245,7 +253,7 @@ class VideoPlayerView : UIView {
             }
             self.videoPlayerContainer.frame = self.videoControl.frame
         case .move(let topOffset):
-            let maxDY = self.defaultFrame.minY - topOffset
+            let maxDY = self.defaulControltFrame.minY - topOffset
             let d = min(abs(dy - self.lastY), maxDY)
             switch self.dragDirection(velocity) {
             case .up where self.videoControl.frame.minY > topOffset:
@@ -255,7 +263,7 @@ class VideoPlayerView : UIView {
                 
                 self.videoControl.frame.origin.y =  self.videoControl.frame.minY - d
                 
-            case .down where self.videoControl.frame.minY < self.defaultFrame.minY:
+            case .down where self.videoControl.frame.minY < self.defaulControltFrame.minY:
                 self.viewInfo.alpha = max(0,(maxDY - abs(dy))/maxDY)
                 
                 self.viewInfo.frame.origin.y = self.viewInfo.frame.origin.y + d
@@ -280,8 +288,8 @@ class VideoPlayerView : UIView {
                 switch self.dragDirection(velocity) {
                 case .up:
                     self.viewInfo.alpha = 1
-                    self.viewInfo.frame.origin.y = self.defaultFrame.maxY - self.viewInfoHeight
-                    self.videoControl.frame.size.height = self.defaultFrame.height - self.viewInfoHeight
+                    self.viewInfo.frame.origin.y = self.defaulControltFrame.maxY - self.viewInfoHeight
+                    self.videoControl.frame.size.height = self.defaulControltFrame.height - self.viewInfoHeight
                 case .down:
                     self.resetLayout()
                 default:
@@ -293,10 +301,10 @@ class VideoPlayerView : UIView {
             UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut]) {
                 switch self.dragDirection(velocity) {
                 case .up:
-                    let d = self.defaultFrame.minY - topOffset
+                    let d = self.defaulControltFrame.minY - topOffset
                     self.viewInfo.alpha = 1
-                    self.videoControl.frame.origin.y = self.defaultFrame.minY - d
-                    self.viewInfo.frame.origin.y = self.defaultFrame.maxY - d
+                    self.videoControl.frame.origin.y = self.defaulControltFrame.minY - d
+                    self.viewInfo.frame.origin.y = self.defaulControltFrame.maxY - d
                     
                 case .down:
                     self.resetLayout()
@@ -310,8 +318,8 @@ class VideoPlayerView : UIView {
     }
     private func resetLayout(){
         self.viewInfo.alpha = 0
-        self.viewInfo.frame  = .init(origin: .init(x: defaultFrame.origin.x, y: defaultFrame.maxY), size: .init(width: defaultFrame.width, height: viewInfoHeight))
-        self.videoControl.frame = self.defaultFrame
+        self.viewInfo.frame  = .init(origin: .init(x: defaulControltFrame.origin.x, y: defaulControltFrame.maxY), size: .init(width: defaulControltFrame.width, height: viewInfoHeight))
+        self.videoControl.frame = self.defaulControltFrame
     }
     private func dragDirection(_ velocity: CGPoint) -> DraggingState{
         if velocity.y < 0 {
@@ -417,7 +425,7 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
                 self.viewInfoHeight = UIScreen.main.bounds.width / 2
             case .small:
                 self.transform = CGAffineTransform(rotationAngle: PlayerRotation.none.radians())
-                self.frame = .init(origin: .zero, size: .init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
+                self.frame = self.defaulFrame
                 self.updateFrame(self.smallRect)
                 self.animationViewtype = .move(100)
                 self.viewInfoHeight = UIScreen.main.bounds.height / 2

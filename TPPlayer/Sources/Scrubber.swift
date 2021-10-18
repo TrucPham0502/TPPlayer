@@ -51,7 +51,6 @@ class Scrubber: UIControl {
     var beginTracking : (CGFloat) -> () = {_ in }
     var endTracking : (CGFloat) -> () = {_ in }
     var thumbScale : CGFloat = 2
-    
     var formatValueDisplay : (CGFloat) -> String = { v in
         return "\(v)"
     }
@@ -97,13 +96,7 @@ class Scrubber: UIControl {
         }
         set {
             if value != newValue {
-                let clampedValue = clamp(newValue, lower: minimumValue, upper: maximumValue)
-                let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x, newMax: bounds.size.width)
-                previousLocation = CGPoint(x: positionX, y: 0.0)
-                
-                _value = clampedValue
-                sendActions(for: .valueChanged)
-                updateFrames()
+                setValue(value: newValue)
             }
         }
     }
@@ -243,21 +236,15 @@ class Scrubber: UIControl {
         return thumbLayer.highlighted
     }
     
-    func getValue(_ touch: UITouch) -> CGFloat {
-        let location = touch.location(in: self)
-        
-        let clampedX = clamp(location.x, lower: bounds.origin.x + thumbWidth / 3.5, upper: bounds.size.width - thumbWidth / 3.5)
-        let deltaLocation = CGPoint(x: clampedX, y: location.y)
-        let deltaValue = rangeMap(deltaLocation.x, min: bounds.origin.x + thumbWidth / 3.5, max: bounds.size.width - thumbWidth / 3.5, newMin: minimumValue, newMax: maximumValue)
-        return deltaValue
-        
-    }
+    
     
     override  func endTracking(_ touch: UITouch?, with event: UIEvent?) {
         print("endTracking")
-        thumbLayer.highlighted = false
         thumbWidth = thumbWidth / thumbScale
-        value = self.trackingValue
+        self.value = self.trackingValue
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.thumbLayer.highlighted = false
+        }
         sendActions(for: .touchUpInside)
         self.endTracking(self.value)
         
@@ -272,8 +259,24 @@ class Scrubber: UIControl {
     
     
     // MARK: - Private Methods -
-
-    
+    private func getValue(_ touch: UITouch) -> CGFloat {
+        let location = touch.location(in: self)
+        
+        let clampedX = clamp(location.x, lower: bounds.origin.x + thumbWidth / 3.5, upper: bounds.size.width - thumbWidth / 3.5)
+        let deltaLocation = CGPoint(x: clampedX, y: location.y)
+        let deltaValue = rangeMap(deltaLocation.x, min: bounds.origin.x + thumbWidth / 3.5, max: bounds.size.width - thumbWidth / 3.5, newMin: minimumValue, newMax: maximumValue)
+        return deltaValue
+        
+    }
+    private func setValue(value : CGFloat, complete:(() -> ())? = nil){
+        let clampedValue = clamp(value, lower: minimumValue, upper: maximumValue)
+        let positionX = rangeMap(clampedValue, min: minimumValue, max: maximumValue, newMin: bounds.origin.x, newMax: bounds.size.width)
+        previousLocation = CGPoint(x: positionX, y: 0.0)
+        
+        _value = clampedValue
+        sendActions(for: .valueChanged)
+        updateFrames()
+    }
     private func commonInit() {
         
         layer.addSublayer(trackLayer)
@@ -309,7 +312,7 @@ class Scrubber: UIControl {
         self.valueDisplayLayer.setNeedsDisplay()
     }
     
-    private func updateFrames(animated : Bool = false) {
+    private func updateFrames(animated : Bool = false, complete:(() -> ())? = nil) {
         CATransaction.begin()
         CATransaction.setDisableActions(!animated)
         CATransaction.setAnimationDuration(0.3)
@@ -324,6 +327,9 @@ class Scrubber: UIControl {
         self.trackFillLayer.frame = CGRect(origin: self.trackLayer.frame.origin, size: CGSize(width: self.previousLocation.x, height: self.trackHeight))
         self.trackFillLayer.cornerRadius = self.trackHeight / 2.0
         self.trackFillLayer.setNeedsDisplay()
+        CATransaction.setCompletionBlock {
+            complete?()
+        }
         CATransaction.commit()
         
        
