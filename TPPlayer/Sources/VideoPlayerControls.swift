@@ -14,6 +14,7 @@ protocol VideoPlayerControlsDelegate : AnyObject {
     func videoPlayerControls(next view : VideoPlayerControls)
     func videoPlayerControls(prev view : VideoPlayerControls)
     func videoPlayerControls(_ view : VideoPlayerControls, resize button : ResizeButton)
+    func videoPlayerControls(_ view : VideoPlayerControls, rate button : UIButton)
 }
 
 
@@ -127,6 +128,7 @@ class VideoPlayerControls : UIView {
         else { v.contentEdgeInsets = .zero }
         v.setImage(UIImage(named: "ic_speed"), for: .normal)
         v.translatesAutoresizingMaskIntoConstraints = false
+        v.addTarget(self, action: #selector(speedButtonPressed), for: .touchUpInside)
         return v
     }()
     
@@ -139,6 +141,9 @@ class VideoPlayerControls : UIView {
             if isHiddenControl { self.hideAllControls() }
             else { self.showAllControls() }
         }
+    }
+    var isTrackingSlider : Bool {
+        return self.progressSlider.isTracking
     }
 
     private var videoLength : Double = 0
@@ -390,12 +395,7 @@ class VideoPlayerControls : UIView {
         self.progressSlider.value = value
     }
     
-    func isInteracting(_ touch : UITouch) -> Bool{
-        let position = touch.location(in: self)
-        return self.subviews.first(where: {
-            return ($0.tag > 0) && $0.alpha > 0 && !$0.isHidden && $0.frame.contains(position)
-        }) != nil
-    }
+    
     
     // MARK: - Private methods -
     private func setRewindAlpha(_ alpha : CGFloat) {
@@ -450,6 +450,10 @@ class VideoPlayerControls : UIView {
         isInteracting = false
         self.delegate?.videoPlayerControls(self, resize: self.resizeButton)
         self.resizeButton.buttonState = self.resizeButton.buttonState == .small ? .large : .small
+    }
+    @objc private func speedButtonPressed() {
+        isInteracting = false
+        delegate?.videoPlayerControls(self, rate: speedButton)
     }
     
     @objc private func progressSliderChanged(slider: Scrubber) {
@@ -607,6 +611,18 @@ class VideoPlayerControls : UIView {
         
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hitView = super.hitTest(point, with: event)
+        if isInteracting(point) { return hitView }
+        return nil
+    }
+
+    func isInteracting(_ point : CGPoint) -> Bool{
+        return self.subviews.first(where: {
+            return ($0.tag > 0) && $0.alpha > 0 && !$0.isHidden && $0.frame.contains(point)
+        }) != nil
+    }
+            
     func isRippleView(_ touch : UITouch) -> Bool {
         return self.rippleRewind.frame.contains(touch.location(in: self)) || self.rippleFastForward.frame.contains(touch.location(in: self))
     }

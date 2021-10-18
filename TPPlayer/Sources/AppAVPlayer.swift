@@ -11,12 +11,19 @@ import AVKit
 
 
 class AppAVPlayer : VideoPlayerType {
+   
     weak var delegate : VideoPlayerDelegate?
     var timeObserver: AnyObject?
     var preferredRate: Float = 1.0
     var shouldLoop: Bool = false
     func setVideo(url : String) {
-        
+        guard let _url = URL(string: url) else {
+            let userInfo = [NSLocalizedDescriptionKey: "url not found."]
+            let videoError = NSError(domain: "videoplayer", code: 99, userInfo: userInfo)
+            delegate?.error(videoError)
+            return
+        }
+        setVideo(url: _url)
     }
     func setVideo(url : URL) {
         let asset = AVAsset(url: url)
@@ -54,7 +61,10 @@ class AppAVPlayer : VideoPlayerType {
             }
         })
     }
-    
+    func setRate(_ rate : Float) {
+        self.preferredRate = rate
+        player.rate = rate
+    }
     var videoLength: Double {
         if let duration = player.currentItem?.asset.duration {
             return duration.seconds

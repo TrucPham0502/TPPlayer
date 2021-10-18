@@ -13,6 +13,7 @@ protocol VideoPlayerDataSource {
     var delegate : VideoPlayerDelegate? {get set}
     var currentTime: Double { get }
     var videoLength : Double { get }
+    var autoPlay : Bool { get }
     var shouldLoop: Bool { get }
     func setVideo(url : String)
     func setVideo(url : URL)
@@ -20,10 +21,17 @@ protocol VideoPlayerDataSource {
     func stopVideo()
     func pauseVideo()
     func seek(to second: Double)
+    func setRate(_ rate : Float)
+}
+extension VideoPlayerDataSource {
+    var autoPlay : Bool {
+        return false
+    }
 }
 
+
 protocol VideoPlayerDelegate : AnyObject {
-    func readyToPlayVideo(_ videoLength: Double, currentTime: Int)
+    func readyToPlayVideo(_ videoLength: Double, currentTime: Double)
     func error(_ error : Error)
     func playing(_ time : Double)
     func seekStarted()
@@ -84,8 +92,16 @@ class VideoPlayerView : UIView {
         return _player
     }()
     
-    private lazy var videoPlayerContainer : UIView = {
-        let v = UIView()
+    private lazy var videoPlayerContainer : UIScrollView = {
+        let v = UIScrollView()
+        v.delegate = self
+        if #available(iOS 11.0, *) {
+            v.contentInsetAdjustmentBehavior = .never
+        }
+        v.minimumZoomScale = 1
+        v.maximumZoomScale = 10
+        v.showsHorizontalScrollIndicator = false
+        v.showsVerticalScrollIndicator = false
         v.backgroundColor = .black
         v.addSubview(videoPlayerLayer)
         return v
@@ -109,6 +125,7 @@ class VideoPlayerView : UIView {
                 DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3), execute: strongSelf.controlsToggleWorkItem!)
             }
         }
+        
         return v
     }()
     
@@ -130,6 +147,18 @@ class VideoPlayerView : UIView {
             setVideoURL(url: url)
         }
     }
+    var videoUrlString: String? = nil {
+        didSet {
+            guard let url = videoUrlString else {
+                status = .error
+                let userInfo = [NSLocalizedDescriptionKey: "Video URL is invalid."]
+                let videoError = NSError(domain: "videoplayer", code: 99, userInfo: userInfo)
+                videoControl.error(videoError)
+                return
+            }
+            setVideoURL(url: url)
+        }
+    }
     
     var currentTime: Double {
         videoPlayerLayer.currentTime
@@ -142,6 +171,7 @@ class VideoPlayerView : UIView {
     
     init(player : VideoPlayerType = AppAVPlayer(), frame : CGRect = .zero) {
         self._player = player
+        self.defaulFrame = frame
         super.init(frame: frame)
         prepareUI()
     }
@@ -150,6 +180,7 @@ class VideoPlayerView : UIView {
         self._player = AppAVPlayer()
         self.defaulFrame = frame
         super.init(frame: frame)
+        prepareUI()
     }
     
     public required init?(coder aDecoder: NSCoder) {
@@ -182,7 +213,7 @@ class VideoPlayerView : UIView {
         super.layoutSubviews()
         videoPlayerLayer.frame = videoPlayerContainer.bounds
     }
-
+    
     private func prepareUI(){
         self.addSubview(videoPlayerContainer)
         self.addSubview(videoControl)
@@ -191,41 +222,52 @@ class VideoPlayerView : UIView {
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
         tapGestureRecognizer.delegate = self
         tapGestureRecognizer.numberOfTapsRequired = 1
+        tapGestureRecognizer.numberOfTouchesRequired = 1
         addGestureRecognizer(tapGestureRecognizer)
         
         
         let doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(doubleTapControl))
-//        doubleTapGestureRecognizer.delegate = self
+        //        doubleTapGestureRecognizer.delegate = self
         doubleTapGestureRecognizer.numberOfTapsRequired = 2
+        doubleTapGestureRecognizer.numberOfTouchesRequired = 1
         addGestureRecognizer(doubleTapGestureRecognizer)
-        
         tapGestureRecognizer.require(toFail: doubleTapGestureRecognizer)
         
         
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(draggedView(_:)))
-        self.addGestureRecognizer(panGesture)
+            videoPlayerContainer.addGestureRecognizer(panGesture)
         panGesture.delegate = self
+        panGesture.cancelsTouchesInView = false
+        
+        
         doubleTapGestureRecognizer.require(toFail: panGesture)
+        
+        
         
     }
     
+    
+    
+    
+    
     @objc func draggedView(_ recognizer : UIPanGestureRecognizer){
+        guard videoPlayerContainer.zoomScale == videoPlayerContainer.minimumZoomScale, !videoControl.isTrackingSlider else { return }
         let dy = recognizer.translation(in: recognizer.view).y
         let vel = recognizer.velocity(in: recognizer.view)
         switch recognizer.state {
         case .began:
             lastY = 0
-            break
         case .changed:
             translate(with: vel, dy: dy)
         case .ended,
-             .cancelled,
-             .failed:
+                .cancelled,
+                .failed:
             finishDragging(with: vel)
             break
         default:
             break
         }
+        
     }
     
     
@@ -282,6 +324,7 @@ class VideoPlayerView : UIView {
     
     
     private func finishDragging(with velocity: CGPoint){
+        
         switch animationViewtype {
         case .scale:
             UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseInOut]) {
@@ -296,6 +339,9 @@ class VideoPlayerView : UIView {
                     break
                 }
                 self.videoPlayerContainer.frame = self.videoControl.frame
+            } completion: { _ in
+                self.videoPlayerContainer.minimumZoomScale = 1
+                self.videoPlayerContainer.zoomScale = 1
             }
         case .move(let topOffset):
             UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut]) {
@@ -312,6 +358,9 @@ class VideoPlayerView : UIView {
                     break
                 }
                 self.videoPlayerContainer.frame = self.videoControl.frame
+            } completion: { _ in
+                self.videoPlayerContainer.minimumZoomScale = 1
+                self.videoPlayerContainer.zoomScale = 1
             }
         }
         
@@ -334,7 +383,7 @@ class VideoPlayerView : UIView {
         videoControl.doubleTapControl(sender)
     }
     
-    @objc func playVideo() {
+    func playVideo() {
         if progress >= 1.0 {
             seekToZero()
         }
@@ -370,7 +419,11 @@ class VideoPlayerView : UIView {
         videoControl.newVideo()
         status = .new
     }
-   
+    private func setVideoURL(url: String) {
+        videoPlayerLayer.setVideo(url: url)
+        videoControl.newVideo()
+        status = .new
+    }
     
     @objc private func toggleControls(_ sender : UITapGestureRecognizer){
         if !videoControl.isHiddenControl {
@@ -386,6 +439,7 @@ class VideoPlayerView : UIView {
         }
         
     }
+    
     
 }
 extension VideoPlayerView : VideoPlayerControlsDelegate {
@@ -413,7 +467,8 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
     }
     
     func videoPlayerControls(_ view: VideoPlayerControls, resize button: ResizeButton) {
-        print("resize")
+        self.videoPlayerContainer.minimumZoomScale = 1
+        self.videoPlayerContainer.zoomScale = 1
         UIView.animate(withDuration: 0.3) {
             self.resetLayout()
             switch button.buttonState {
@@ -435,14 +490,20 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
         
     }
     
+    func videoPlayerControls(_ view: VideoPlayerControls, rate button: UIButton) {
+        videoPlayerLayer.setRate(2.0)
+    }
     
 }
 extension VideoPlayerView : VideoPlayerDelegate {
-    func readyToPlayVideo(_ videoLength: Double, currentTime: Int) {
+    func readyToPlayVideo(_ videoLength: Double, currentTime: Double) {
         if status == .new {
             status = .readyToPlay
         }
         videoControl.readyToPlayVideo(videoLength, currentTime: 0)
+        if videoPlayerLayer.autoPlay {
+            self.playVideo()
+        }
     }
     
     func error(_ error: Error) {
@@ -476,9 +537,35 @@ extension VideoPlayerView : VideoPlayerDelegate {
 
 extension VideoPlayerView : UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        
+        if let panGesture = gestureRecognizer as? UIPanGestureRecognizer {
+            if videoPlayerContainer.zoomScale == videoPlayerContainer.minimumZoomScale {
+                let velocity = panGesture.velocity(in: gestureRecognizer.view)
+                return abs(velocity.y) >= abs(velocity.x)
+            }
+            return false
+        }
+        
         if let ges = gestureRecognizer as? UITapGestureRecognizer, ges.numberOfTapsRequired == 2 {
             return videoControl.isRippleView(touch)
         }
-        return (videoControl.isHiddenControl || !videoControl.isInteracting(touch)) && self.videoPlayerContainer.frame.contains(touch.location(in: self))
+        
+        return (videoControl.isHiddenControl || !videoControl.isInteracting(touch.location(in: self.videoControl))) && self.videoPlayerContainer.frame.contains(touch.location(in: self))
     }
 }
+extension VideoPlayerView : UIScrollViewDelegate {
+
+    private func updateConstraintsForSize(size: CGSize) {
+        let yOffset = max(0, (size.height - videoPlayerLayer.frame.height) / 2)
+        let xOffset = max(0, (size.width - videoPlayerLayer.frame.width) / 2)
+        videoPlayerLayer.frame.origin = CGPoint(x: xOffset, y: yOffset)
+        self.layoutIfNeeded()
+    }
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return videoPlayerLayer
+    }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        updateConstraintsForSize(size: self.videoPlayerLayer.bounds.size)
+    }
+}
+
