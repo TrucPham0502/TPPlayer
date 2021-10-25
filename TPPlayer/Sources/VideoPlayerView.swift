@@ -12,6 +12,7 @@ typealias VideoPlayerType = VideoPlayerDataSource & UIView
 protocol VideoPlayerDataSource {
     var delegate : VideoPlayerDelegate? {get set}
     var currentTime: Double { get }
+    var videoSize : CGSize { get }
     var videoLength : Double { get }
     var autoPlay : Bool { get }
     var shouldLoop: Bool { get }
@@ -22,10 +23,14 @@ protocol VideoPlayerDataSource {
     func pauseVideo()
     func seek(to second: Double)
     func setRate(_ rate : Float)
+    
 }
 extension VideoPlayerDataSource {
     var autoPlay : Bool {
         return false
+    }
+    var videoSize : CGSize {
+        return .init(width: 16, height: 9)
     }
 }
 
@@ -135,6 +140,11 @@ class VideoPlayerView : UIView {
     var shouldLoop: Bool = false
     var timeObserver: AnyObject?
     var preferredRate: Float = 1.0
+    var hiddenViewInfo : Bool = true {
+        didSet {
+            resetLayout()
+        }
+    }
     var videoURL: URL? = nil {
         didSet {
             guard let url = videoURL else {
@@ -211,7 +221,7 @@ class VideoPlayerView : UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        videoPlayerLayer.frame = videoPlayerContainer.bounds
+        updateFrameVideoPlayer()
     }
     
     private func prepareUI(){
@@ -235,19 +245,24 @@ class VideoPlayerView : UIView {
         
         
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(draggedView(_:)))
-            videoPlayerContainer.addGestureRecognizer(panGesture)
+        videoPlayerContainer.addGestureRecognizer(panGesture)
         panGesture.delegate = self
         panGesture.cancelsTouchesInView = false
         
         
         doubleTapGestureRecognizer.require(toFail: panGesture)
         
-        
+        NotificationCenter.default.addObserver(self, selector: #selector(rotated), name: UIDevice.orientationDidChangeNotification, object: nil)
         
     }
     
     
-    
+    private func updateFrameVideoPlayer(){
+        let videoSize = self.videoPlayerLayer.videoSize
+        let size = self.videoPlayerContainer.bounds.size
+        let sizeOffset = CGSize(width: size.height * videoSize.width / max(videoSize.height, 1) , height: size.height)
+        self.videoPlayerLayer.frame = .init(origin: .init(x: (videoPlayerContainer.frame.width - sizeOffset.width) / 2 , y: 0), size: sizeOffset)
+    }
     
     
     @objc func draggedView(_ recognizer : UIPanGestureRecognizer){
@@ -439,7 +454,37 @@ class VideoPlayerView : UIView {
         }
         
     }
-    
+    @objc func rotated() {
+        self.videoPlayerContainer.minimumZoomScale = 1
+        self.videoPlayerContainer.zoomScale = 1
+        UIView.animate(withDuration: 0.3) {
+            self.resetLayout()
+            switch UIDevice.current.orientation {
+            case .portraitUpsideDown:
+                fallthrough
+            case .landscapeLeft:
+                fallthrough
+            case .landscapeRight:
+                //                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.left.radians())
+                self.frame = UIScreen.main.bounds
+                self.updateFrame(self.bounds)
+                self.animationViewtype = .scale
+                self.viewInfoHeight = UIScreen.main.bounds.height / 2
+                self.videoControl.resizeScreen(.small)
+            default:
+                //                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.none.radians())
+                self.frame = self.defaulFrame
+                self.updateFrame(self.smallRect)
+                self.animationViewtype = .move(100)
+                self.viewInfoHeight = UIScreen.main.bounds.height / 2
+                self.videoControl.resizeScreen(.large)
+            }
+        }
+        
+    }
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
+    }
     
 }
 extension VideoPlayerView : VideoPlayerControlsDelegate {
@@ -467,25 +512,11 @@ extension VideoPlayerView : VideoPlayerControlsDelegate {
     }
     
     func videoPlayerControls(_ view: VideoPlayerControls, resize button: ResizeButton) {
-        self.videoPlayerContainer.minimumZoomScale = 1
-        self.videoPlayerContainer.zoomScale = 1
-        UIView.animate(withDuration: 0.3) {
-            self.resetLayout()
-            switch button.buttonState {
-            case .large:
-                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.left.radians())
-                self.frame = .init(origin: .zero, size: .init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
-                self.updateFrame(self.bounds)
-                self.animationViewtype = .scale
-                self.viewInfoHeight = UIScreen.main.bounds.width / 2
-            case .small:
-                self.transform = CGAffineTransform(rotationAngle: PlayerRotation.none.radians())
-                self.frame = self.defaulFrame
-                self.updateFrame(self.smallRect)
-                self.animationViewtype = .move(100)
-                self.viewInfoHeight = UIScreen.main.bounds.height / 2
-                
-            }
+        switch button.buttonState {
+        case .large:
+            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+        case .small:
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
         }
         
     }
@@ -504,6 +535,7 @@ extension VideoPlayerView : VideoPlayerDelegate {
         if videoPlayerLayer.autoPlay {
             self.playVideo()
         }
+        updateFrameVideoPlayer()
     }
     
     func error(_ error: Error) {
@@ -539,7 +571,7 @@ extension VideoPlayerView : UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         
         if let panGesture = gestureRecognizer as? UIPanGestureRecognizer {
-            if videoPlayerContainer.zoomScale == videoPlayerContainer.minimumZoomScale {
+            if videoPlayerContainer.zoomScale == videoPlayerContainer.minimumZoomScale && !hiddenViewInfo {
                 let velocity = panGesture.velocity(in: panGesture.view)
                 return abs(velocity.y) >= abs(velocity.x)
             }
@@ -554,18 +586,19 @@ extension VideoPlayerView : UIGestureRecognizerDelegate {
     }
 }
 extension VideoPlayerView : UIScrollViewDelegate {
-
+    
     private func updateConstraintsForSize(size: CGSize) {
-        let yOffset = max(0, (size.height - videoPlayerLayer.frame.height) / 2)
-        let xOffset = max(0, (size.width - videoPlayerLayer.frame.width) / 2)
-        videoPlayerLayer.frame.origin = CGPoint(x: xOffset, y: yOffset)
+        let yOffset = max(0,(size.height - videoPlayerLayer.frame.height) / 2)
+        let xOffset = max(0,(size.width - videoPlayerLayer.frame.width) / 2)
+        videoPlayerLayer.frame.origin = CGPoint(x: xOffset , y: yOffset)
         self.layoutIfNeeded()
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         return videoPlayerLayer
     }
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        updateConstraintsForSize(size: self.videoPlayerLayer.bounds.size)
+        updateConstraintsForSize(size: self.videoPlayerContainer.bounds.size)
     }
+    
 }
 

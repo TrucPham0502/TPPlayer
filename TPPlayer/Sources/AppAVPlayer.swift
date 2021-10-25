@@ -79,9 +79,13 @@ class AppAVPlayer : VideoPlayerType {
         return 0.0
     }
     
+    var videoSize: CGSize {
+        return player.currentItem?.asset.videoSize ?? .init(width: 16, height: 9)
+    }
+    
     private lazy var videoPlayerLayer : AVPlayerLayer = {
         let v = AVPlayerLayer()
-        v.videoGravity = AVLayerVideoGravity.resizeAspect
+        v.videoGravity = AVLayerVideoGravity.resizeAspectFill
         v.player = player
         v.contentsScale = UIScreen.main.scale
         return v
@@ -106,7 +110,10 @@ class AppAVPlayer : VideoPlayerType {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        self.videoPlayerLayer.frame = self.bounds
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.videoPlayerLayer.frame.size = self.bounds.size
+        CATransaction.commit()
     }
     
     private func deinitObservers() {
@@ -161,3 +168,10 @@ class AppAVPlayer : VideoPlayerType {
     }
 }
 
+extension AVAsset {
+    var videoSize : CGSize {
+        guard let track = self.tracks(withMediaType: .video).first else { return .zero }
+        let size = track.naturalSize.applying(track.preferredTransform)
+        return size
+    }
+}
